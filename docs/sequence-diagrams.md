@@ -9,7 +9,7 @@ sequenceDiagram
     participant R as Redis
     participant DB as MySQL
 
-    C->>S: GET /api/checkout/{productId}<br/>X-User-Id: {userId}
+    C->>S: GET /api/checkout/products/{productId}<br/>X-User-Id: {userId}
 
     par 병렬 조회
         S->>R: 잔여 재고 조회 (GET stock:{productId})
