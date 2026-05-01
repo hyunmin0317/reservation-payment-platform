@@ -1,3 +1,28 @@
+# Build
+build/
+bin/
+.gradle/
+out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+*.env
+*.log
+
+# Project specific
 *.pdf
 CONTEXT.md
 DECISIONS_DRAFT.md
