@@ -42,7 +42,7 @@
 
 **트레이드오프**
 
-- Redis 장애 시 DB 비관적 락으로 Fallback (성능 저하를 감수하되 서비스 중단 방지, Phase 8에서 구현)
+- Redis 장애 시 DB 비관적 락으로 Fallback (성능 저하를 감수하되 서비스 중단 방지, 쟁점 4 참고)
 - Redis는 휘발성이므로 DB를 최종 정합성 기준으로 유지
 - Redis 서버 1대 추가 운영 필요하나, 멱등성 키(Phase 7)·Rate Limiting(Phase 9) 등에서도 활용하므로 비용 대비 효과 충분
 
@@ -280,7 +280,7 @@ Redis가 대부분의 트래픽을 흡수하므로 DB에 도달하는 요청은 
 | permitted-number-of-calls-in-half-open-state | 3 | 3건 시도하여 복구 여부 판단 |
 | minimum-number-of-calls | 5 | 최소 5건 이후부터 실패율 계산 |
 
-**서킷 OPEN 시 동작**: `CallNotPermittedException` → 외부 호출 없이 즉시 `PAYMENT_TIMEOUT` 반환 → 스레드 점유 방지
+**서킷 OPEN 시 동작**: `CallNotPermittedException` → 외부 호출 없이 즉시 `PAYMENT_SERVICE_UNAVAILABLE` 반환 → 스레드 점유 방지
 
 **트레이드오프**
 
@@ -331,4 +331,14 @@ self-invocation 시 Spring AOP 프록시가 동작하지 않는 문제를 방지
 
 ## 쟁점 8. 라이브러리 도입 사유
 
-> 각 라이브러리 도입 시점에 작성 예정
+### Resilience4j
+
+- 외부 결제 연동부에 서킷브레이커 패턴을 적용하기 위해 도입
+- Spring Boot 3과의 통합이 우수하며, Netflix Hystrix의 후속으로 가볍고 모듈화되어 있음
+- `CircuitBreakerRegistry`를 통한 프로그래밍 방식 적용으로 추상 클래스(`ExternalPaymentStrategy`)에서도 유연하게 사용 가능
+
+### Spring Data Redis
+
+- Redis Lua 스크립트 기반 재고 차감, 멱등성 키 저장, Rate Limiting에 활용
+- `StringRedisTemplate`, `RedisScript` 등 Spring 추상화를 통해 Redis 연동을 간결하게 처리
+- Lettuce 기반 비동기 커넥션으로 성능 확보

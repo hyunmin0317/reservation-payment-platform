@@ -15,7 +15,7 @@
 | Cache | Redis 7 |
 | Build | Gradle |
 | Infra | Docker Compose (MySQL, Redis) |
-| Library | Spring Data JPA, Spring Data Redis, Resilience4j, Redisson |
+| Library | Spring Data JPA, Spring Data Redis, Resilience4j |
 
 ---
 
@@ -45,6 +45,7 @@ src/main/java/com/reservation/
 │   │   ├── repository/
 │   │   └── service/
 │   └── payment/             # 결제 도메인
+│       ├── client/           # 외부 결제 클라이언트 (PG, Y페이)
 │       ├── dto/
 │       ├── entity/
 │       ├── repository/
@@ -52,12 +53,14 @@ src/main/java/com/reservation/
 │           └── strategy/    # 결제 수단별 Strategy
 └── global/
     ├── common/
+    │   ├── constants/        # 상수 (헤더 등)
     │   ├── dto/              # 공통 응답 포맷
     │   └── entity/           # BaseEntity
-    ├── config/               # Redis, JPA 등 설정
-    └── exception/            # 글로벌 예외 처리
-        ├── code/             # ErrorCode enum
-        └── handler/          # ExceptionHandler
+    ├── config/               # Redis, JPA, Web 설정
+    ├── exception/            # 글로벌 예외 처리
+    │   ├── code/             # ErrorCode enum
+    │   └── handler/          # ExceptionHandler
+    └── ratelimit/            # Rate Limiting
 ```
 
 ---
@@ -152,7 +155,7 @@ Content-Type: application/json
 ```json
 {
   "orderId": 1,
-  "orderNumber": "ORD-20260501-000001",
+  "orderNumber": "ORD-20260501-a3f2b1c4",
   "totalAmount": 50000,
   "orderStatus": "COMPLETED",
   "payments": [
@@ -183,14 +186,18 @@ Content-Type: application/json
 
 | HTTP 상태 | 에러 코드 | 설명 |
 |-----------|----------|------|
-| 400 | `PAYMENT001` | 허용되지 않는 결제 수단 조합 |
-| 400 | `PAYMENT002` | 결제 금액이 상품 가격과 불일치 |
-| 400 | `PAYMENT003` | 결제 승인 실패 (한도 초과 등) |
+| 400 | `PAYMENT002` | 포인트 부족 |
+| 400 | `PAYMENT003` | 외부 결제 수단은 하나만 사용 가능 |
+| 400 | `PAYMENT004` | 결제 한도 초과 |
 | 404 | `PRODUCT001` | 상품을 찾을 수 없음 |
 | 404 | `USER001` | 사용자를 찾을 수 없음 |
-| 409 | `STOCK001` | 재고 부족 |
+| 409 | `STOCK002` | 재고 부족 |
 | 409 | `ORDER001` | 중복 요청 (멱등성 키) |
+| 429 | `COMMON005` | 요청 횟수 초과 (Rate Limiting) |
+| 500 | `PAYMENT001` | 결제 실패 |
 | 500 | `COMMON000` | 서버 내부 오류 |
+| 503 | `PAYMENT005` | 결제 요청 시간 초과 |
+| 503 | `PAYMENT006` | 결제 서비스 일시 이용 불가 (서킷 오픈) |
 
 ---
 
