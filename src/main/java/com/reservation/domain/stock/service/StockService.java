@@ -19,4 +19,12 @@ public class StockService {
         return stockRepository.findByProductId(productId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.STOCK_NOT_FOUND));
     }
+
+    @Transactional
+    public void decreaseWithPessimisticLock(Long productId) {
+        Stock stock = stockRepository.findByProductIdWithPessimisticLock(productId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.STOCK_NOT_FOUND));
+
+        stock.decrease();
+    }
 }

@@ -2,6 +2,8 @@ package com.reservation.domain.stock.entity;
 
 import com.reservation.domain.product.entity.Product;
 import com.reservation.global.common.entity.BaseEntity;
+import com.reservation.global.exception.GeneralException;
+import com.reservation.global.exception.code.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -29,9 +31,17 @@ public class Stock extends BaseEntity {
     @Version
     private int version;
 
+    public static Stock create(Product product, int totalQuantity) {
+        Stock stock = new Stock();
+        stock.product = product;
+        stock.totalQuantity = totalQuantity;
+        stock.remainingQuantity = totalQuantity;
+        return stock;
+    }
+
     public void decrease() {
         if (this.remainingQuantity <= 0) {
-            throw new IllegalStateException("재고가 부족합니다.");
+            throw new GeneralException(ErrorCode.STOCK_SOLD_OUT);
         }
         this.remainingQuantity--;
     }
