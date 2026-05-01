@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 public record PaymentRequest(
-        @NotNull PaymentMethod paymentMethod,
+        @NotNull PaymentMethod method,
         @Positive int amount
 ) {
 }

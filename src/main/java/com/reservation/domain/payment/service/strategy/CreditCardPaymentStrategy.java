@@ -12,7 +12,7 @@ public class CreditCardPaymentStrategy extends ExternalPaymentStrategy {
     }
 
     @Override
-    public PaymentMethod getPaymentMethod() {
+    public PaymentMethod getMethod() {
         return PaymentMethod.CREDIT_CARD;
     }
 }

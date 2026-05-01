@@ -52,7 +52,7 @@ erDiagram
         varchar(20) payment_method "결제 수단"
         int amount "결제 금액"
         varchar(20) status "결제 상태"
-        varchar(100) transaction_id "PG 거래 ID"
+        varchar(100) transaction_id "거래 ID"
         datetime created_at "생성일시"
         datetime updated_at "수정일시"
     }
@@ -126,7 +126,7 @@ erDiagram
 | payment_method | VARCHAR(20) | NOT NULL | 결제 수단 (CREDIT_CARD/Y_PAY/Y_POINT) |
 | amount | INT | NOT NULL | 결제 금액 |
 | status | VARCHAR(20) | NOT NULL | 결제 상태 (PENDING/APPROVED/FAILED/CANCELLED) |
-| transaction_id | VARCHAR(100) | | PG 거래 ID |
+| transaction_id | VARCHAR(100) | | 거래 ID |
 | created_at | DATETIME | NOT NULL | 생성일시 |
 | updated_at | DATETIME | NOT NULL | 수정일시 |
 
