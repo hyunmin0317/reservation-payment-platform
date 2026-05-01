@@ -25,7 +25,7 @@ public abstract class ExternalPaymentStrategy implements PaymentStrategy {
 
         if (!result.success()) {
             payment.fail();
-            throw mapFailureToException(result.failureReason());
+            throw new GeneralException(result.errorCode());
         }
 
         payment.approve(result.transactionId());
@@ -34,16 +34,5 @@ public abstract class ExternalPaymentStrategy implements PaymentStrategy {
     @Override
     public void cancel(Payment payment, Order order) {
         client.cancel(payment.getTransactionId());
-    }
-
-    private GeneralException mapFailureToException(String failureReason) {
-        if (failureReason == null) {
-            return new GeneralException(ErrorCode.PAYMENT_FAILED);
-        }
-        return switch (failureReason) {
-            case "LIMIT_EXCEEDED" -> new GeneralException(ErrorCode.PAYMENT_LIMIT_EXCEEDED);
-            case "TIMEOUT" -> new GeneralException(ErrorCode.PAYMENT_TIMEOUT);
-            default -> new GeneralException(ErrorCode.PAYMENT_FAILED);
-        };
     }
 }
