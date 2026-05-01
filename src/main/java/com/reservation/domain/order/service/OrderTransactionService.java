@@ -24,7 +24,7 @@ public class OrderTransactionService {
     private final OrderNumberGenerator orderNumberGenerator;
 
     @Transactional
-    public OrderResult process(User user, Product product, String idempotencyKey, BookingRequest request) {
+    public OrderResult process(User user, Product product, String idempotencyKey, BookingRequest request, boolean decreaseDbStock) {
         Order order = Order.builder()
                 .orderNumber(orderNumberGenerator.generate())
                 .user(user)
@@ -36,7 +36,9 @@ public class OrderTransactionService {
 
         List<Payment> payments = paymentService.pay(order, request.payments());
 
-        stockService.decreaseWithPessimisticLock(product.getId());
+        if (decreaseDbStock) {
+            stockService.decreaseWithPessimisticLock(product.getId());
+        }
         order.complete();
 
         return new OrderResult(order, payments);
