@@ -1,0 +1,45 @@
+spring:
+  profiles:
+    active: local
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+  jackson:
+    property-naming-strategy: LOWER_CAMEL_CASE
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/reservation?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql
+    defer-datasource-initialization: true
+
+server:
+  port: 8080
