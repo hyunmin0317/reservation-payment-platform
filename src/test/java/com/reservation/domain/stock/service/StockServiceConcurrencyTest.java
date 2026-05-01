@@ -6,6 +6,7 @@ import com.reservation.domain.stock.entity.Stock;
 import com.reservation.domain.stock.repository.StockRepository;
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
+import com.redis.testcontainers.RedisContainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -17,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -41,6 +43,10 @@ class StockServiceConcurrencyTest {
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("reservation_test");
 
+    @Container
+    @ServiceConnection
+    static RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:7"));
+
     private static final int TOTAL_STOCK = 10;
 
     @Autowired
@@ -48,6 +54,9 @@ class StockServiceConcurrencyTest {
 
     @Autowired
     private StockFacade stockFacade;
+
+    @Autowired
+    private RedisStockService redisStockService;
 
     @Autowired
     private ProductRepository productRepository;
@@ -119,10 +128,8 @@ class StockServiceConcurrencyTest {
         executorService.shutdown();
         assertThat(executorService.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
 
-        Stock stock = stockRepository.findByProductId(productId).orElseThrow();
         assertThat(successCount).isEqualTo(TOTAL_STOCK);
         assertThat(failureCount).isEqualTo(requestCount - TOTAL_STOCK);
-        assertThat(stock.getRemainingQuantity()).isZero();
 
         List<Long> sortedLatencies = latencies.stream().sorted().toList();
         long avgMs = sortedLatencies.stream().mapToLong(Long::longValue).sum() / sortedLatencies.size() / 1_000_000;
@@ -143,6 +150,9 @@ class StockServiceConcurrencyTest {
         void preventsOverselling(int requestCount) throws Exception {
             runConcurrencyTest("Pessimistic lock",
                     () -> stockService.decreaseWithPessimisticLock(productId), requestCount);
+
+            Stock stock = stockRepository.findByProductId(productId).orElseThrow();
+            assertThat(stock.getRemainingQuantity()).isZero();
         }
     }
 
@@ -153,6 +163,24 @@ class StockServiceConcurrencyTest {
         void preventsOverselling(int requestCount) throws Exception {
             runConcurrencyTest("Optimistic lock (retry=100)",
                     () -> stockFacade.decreaseWithOptimisticLock(productId, 100), requestCount);
+
+            Stock stock = stockRepository.findByProductId(productId).orElseThrow();
+            assertThat(stock.getRemainingQuantity()).isZero();
+        }
+    }
+
+    @Nested
+    class RedisLua {
+        @BeforeEach
+        void setUpRedis() {
+            redisStockService.initStock(productId, TOTAL_STOCK);
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {100, 1000})
+        void preventsOverselling(int requestCount) throws Exception {
+            runConcurrencyTest("Redis Lua",
+                    () -> redisStockService.decrease(productId), requestCount);
         }
     }
 }
