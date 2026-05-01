@@ -36,7 +36,6 @@ public class BookingService {
     private final IdempotencyService idempotencyService;
 
     public BookingResponse book(Long userId, String idempotencyKey, BookingRequest request) {
-        // 1. 멱등성 체크 — 이미 처리된 요청이면 기존 결과 반환
         if (idempotencyService.exists(idempotencyKey)) {
             return getExistingOrder(idempotencyKey);
         }
@@ -44,19 +43,13 @@ public class BookingService {
         Product product = productService.getProduct(request.productId());
         User user = userService.getUser(userId);
 
-        // 2. Redis 재고 차감
         redisStockService.decrease(product.getId());
 
         try {
-            // 3. 주문 생성 + 결제 + 확정 (트랜잭션)
             BookingResponse response = processOrder(user, product, idempotencyKey, request);
-
-            // 4. 멱등성 키 저장
             idempotencyService.save(idempotencyKey);
-
             return response;
         } catch (GeneralException e) {
-            // 결제 실패 시 Redis 재고 복구
             redisStockService.increase(product.getId());
             throw e;
         }
@@ -80,10 +73,8 @@ public class BookingService {
                 .build();
         orderRepository.save(order);
 
-        // 결제
         List<Payment> payments = paymentService.pay(order, request.payments());
 
-        // DB 재고 차감 + 주문 확정
         stockService.decreaseWithPessimisticLock(product.getId());
         order.complete();
 
