@@ -4,6 +4,7 @@ import com.reservation.domain.order.entity.Order;
 import com.reservation.domain.payment.dto.PaymentRequest;
 import com.reservation.domain.payment.entity.Payment;
 import com.reservation.domain.payment.entity.PaymentMethod;
+import com.reservation.domain.payment.entity.PaymentMethod.PaymentMethodType;
 import com.reservation.domain.payment.repository.PaymentRepository;
 import com.reservation.domain.payment.service.strategy.PaymentStrategy;
 import com.reservation.global.exception.GeneralException;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +36,7 @@ public class PaymentService {
     public List<Payment> pay(Order order, List<PaymentRequest> requests) {
         validateCombination(requests);
 
-        List<PaymentRequest> sorted = sortPointFirst(requests);
+        List<PaymentRequest> sorted = sortInternalFirst(requests);
         List<Payment> completedPayments = new ArrayList<>();
 
         try {
@@ -60,25 +62,19 @@ public class PaymentService {
     }
 
     private void validateCombination(List<PaymentRequest> requests) {
-        Set<PaymentMethod> methods = requests.stream()
-                .map(PaymentRequest::paymentMethod)
-                .collect(Collectors.toSet());
+        long externalCount = requests.stream()
+                .filter(r -> r.paymentMethod().getType() == PaymentMethodType.EXTERNAL)
+                .count();
 
-        if (methods.contains(PaymentMethod.CREDIT_CARD) && methods.contains(PaymentMethod.Y_PAY)) {
+        if (externalCount > 1) {
             throw new GeneralException(ErrorCode.INVALID_PAYMENT_COMBINATION);
         }
     }
 
-    private List<PaymentRequest> sortPointFirst(List<PaymentRequest> requests) {
-        List<PaymentRequest> sorted = new ArrayList<>();
-        for (PaymentRequest request : requests) {
-            if (request.paymentMethod() == PaymentMethod.Y_POINT) {
-                sorted.add(0, request);
-            } else {
-                sorted.add(request);
-            }
-        }
-        return sorted;
+    private List<PaymentRequest> sortInternalFirst(List<PaymentRequest> requests) {
+        return requests.stream()
+                .sorted(Comparator.comparing(r -> r.paymentMethod().getType() == PaymentMethodType.INTERNAL ? 0 : 1))
+                .collect(Collectors.toList());
     }
 
     private void rollback(List<Payment> completedPayments, Order order) {
