@@ -5,19 +5,15 @@ import com.reservation.domain.payment.entity.PaymentMethod;
 import com.reservation.domain.payment.entity.PaymentStatus;
 
 public record PaymentResponse(
-        Long paymentId,
-        PaymentMethod paymentMethod,
+        PaymentMethod method,
         int amount,
-        PaymentStatus status,
-        String transactionId
+        PaymentStatus status
 ) {
     public static PaymentResponse from(Payment payment) {
         return new PaymentResponse(
-                payment.getId(),
-                payment.getPaymentMethod(),
+                payment.getMethod(),
                 payment.getAmount(),
-                payment.getStatus(),
-                payment.getTransactionId()
+                payment.getStatus()
         );
     }
 }
