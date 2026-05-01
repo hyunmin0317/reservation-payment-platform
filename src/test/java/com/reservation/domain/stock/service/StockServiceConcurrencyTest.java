@@ -7,6 +7,7 @@ import com.reservation.domain.stock.repository.StockRepository;
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,9 @@ class StockServiceConcurrencyTest {
     private StockService stockService;
 
     @Autowired
+    private StockFacade stockFacade;
+
+    @Autowired
     private ProductRepository productRepository;
 
     @Autowired
@@ -72,13 +76,10 @@ class StockServiceConcurrencyTest {
         productId = savedProduct.getId();
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = {100, 1000})
-    void pessimisticLockPreventsOverselling(int requestCount) throws Exception {
+    private void runConcurrencyTest(String label, Runnable operation, int requestCount) throws Exception {
         ExecutorService executorService = Executors.newFixedThreadPool(64);
         CountDownLatch startLatch = new CountDownLatch(1);
         List<Callable<Boolean>> tasks = new ArrayList<>();
-
         List<Long> latencies = Collections.synchronizedList(new ArrayList<>());
 
         for (int i = 0; i < requestCount; i++) {
@@ -86,7 +87,7 @@ class StockServiceConcurrencyTest {
                 startLatch.await();
                 long start = System.nanoTime();
                 try {
-                    stockService.decreaseWithPessimisticLock(productId);
+                    operation.run();
                     latencies.add(System.nanoTime() - start);
                     return true;
                 } catch (GeneralException exception) {
@@ -130,8 +131,28 @@ class StockServiceConcurrencyTest {
         long p99Ms = sortedLatencies.get((int) (sortedLatencies.size() * 0.99)) / 1_000_000;
 
         System.out.printf(
-                "Pessimistic lock: requests=%d, success=%d, failure=%d, totalMs=%d, avgMs=%d, p95Ms=%d, p99Ms=%d, maxMs=%d%n",
-                requestCount, successCount, failureCount, elapsedMillis, avgMs, p95Ms, p99Ms, maxMs
+                "%s: requests=%d, success=%d, failure=%d, totalMs=%d, avgMs=%d, p95Ms=%d, p99Ms=%d, maxMs=%d%n",
+                label, requestCount, successCount, failureCount, elapsedMillis, avgMs, p95Ms, p99Ms, maxMs
         );
+    }
+
+    @Nested
+    class PessimisticLock {
+        @ParameterizedTest
+        @ValueSource(ints = {100, 1000})
+        void preventsOverselling(int requestCount) throws Exception {
+            runConcurrencyTest("Pessimistic lock",
+                    () -> stockService.decreaseWithPessimisticLock(productId), requestCount);
+        }
+    }
+
+    @Nested
+    class OptimisticLock {
+        @ParameterizedTest
+        @ValueSource(ints = {100, 1000})
+        void preventsOverselling(int requestCount) throws Exception {
+            runConcurrencyTest("Optimistic lock (retry=100)",
+                    () -> stockFacade.decreaseWithOptimisticLock(productId, 100), requestCount);
+        }
     }
 }
