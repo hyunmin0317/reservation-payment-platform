@@ -48,9 +48,76 @@
 
 ---
 
-## 쟁점 2. 결제 수단 확장성
+## 쟁점 2. 결제 수단 확장성 — Strategy 패턴 도입
 
-> Phase 6에서 작성 예정
+> 신용카드, Y페이, Y포인트를 지원하면서 새 결제 수단 추가 시 기존 비즈니스 로직 수정을 최소화하는 구조
+
+### 검토한 방식
+
+| 방식 | 핵심 원리 |
+|------|---------|
+| if-else 분기 | `PaymentService` 내에서 결제 수단별 `if-else`로 분기 처리 |
+| Strategy 패턴 | `PaymentStrategy` 인터페이스 + 결제 수단별 구현체, Spring DI 자동 등록 |
+
+### 구현 과정
+
+**Step 1. if-else 분기로 구현**
+
+가장 단순한 방식으로 먼저 구현하여 동작을 검증하였습니다.
+
+```java
+if (request.paymentMethod() == PaymentMethod.Y_POINT) {
+    // 포인트 차감 로직
+} else if (request.paymentMethod() == PaymentMethod.CREDIT_CARD
+        || request.paymentMethod() == PaymentMethod.Y_PAY) {
+    // PG 결제 로직
+}
+```
+
+- 결제 수단이 3개인 현재는 문제없이 동작
+- 단, 새 결제 수단 추가 시 `PaymentService.pay()` 메서드와 보상 트랜잭션 로직 **모두 수정 필요** (OCP 위반)
+
+**Step 2. Strategy 패턴으로 리팩토링**
+
+```java
+public interface PaymentStrategy {
+    PaymentMethod getPaymentMethod();
+    void pay(Payment payment, Order order);
+    void cancel(Payment payment, Order order);
+}
+```
+
+- `CreditCardPaymentStrategy`, `YPayPaymentStrategy`, `YPointPaymentStrategy` 구현
+- `PaymentService` 생성자에서 `List<PaymentStrategy>`를 주입받아 `Map<PaymentMethod, PaymentStrategy>`로 변환
+- 결제 실행과 보상 취소 모두 Strategy에 위임
+
+### 최종 선택: Strategy 패턴
+
+**선택 근거**
+
+- 새 결제 수단 추가 시 `PaymentStrategy` 구현체 하나와 `PaymentMethod` enum 값 하나만 추가하면 됨 → `PaymentService` 수정 불필요 (OCP 준수)
+- Spring DI가 `List<PaymentStrategy>`를 자동 수집하므로 별도 등록 코드 불필요
+- 각 결제 수단의 결제/취소 로직이 구현체에 캡슐화되어 테스트와 유지보수가 용이
+- 복합 결제 시 보상 트랜잭션도 `strategy.cancel()`로 위임하여 `PaymentService`가 결제 수단별 취소 방법을 알 필요 없음
+
+**if-else 대비 개선점**
+
+| 항목 | if-else | Strategy 패턴 |
+|------|---------|--------------|
+| 결제 수단 추가 시 수정 파일 | PaymentService (결제 + 보상 로직) | 구현체 1개 추가만 |
+| PaymentService 코드량 | 결제 수단 증가에 비례하여 증가 | 결제 수단 수와 무관 |
+| 단위 테스트 | 전체 서비스 테스트 필요 | 구현체별 독립 테스트 가능 |
+
+**복합 결제 처리 전략**
+
+- 포인트를 먼저 차감한 뒤 카드/Y페이 결제를 진행 (`sortPointFirst`)
+- 카드/Y페이 결제 실패 시 이미 차감된 포인트를 `cancel()`로 환불하는 보상 트랜잭션 실행
+- 신용카드 + Y페이 혼용은 `validateCombination`에서 사전 차단
+
+**트레이드오프**
+
+- 결제 수단 3개인 현 규모에서는 if-else도 충분히 단순하나, 과제 요구사항이 "비즈니스 로직 수정 최소화"를 명시하므로 Strategy 패턴이 적합
+- 조합 검증 로직(`validateCombination`)은 `PaymentService`에 유지 — 개별 Strategy가 아닌 조합 간 규칙이므로 서비스 레벨에서 관리하는 것이 자연스러움
 
 ---
 
