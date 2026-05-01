@@ -1,21 +1,21 @@
 package com.reservation.domain.payment.service.strategy;
 
 import com.reservation.domain.order.entity.Order;
+import com.reservation.domain.payment.client.ExternalPaymentClient;
+import com.reservation.domain.payment.client.PaymentResult;
 import com.reservation.domain.payment.entity.Payment;
-import com.reservation.domain.payment.pg.PgClient;
-import com.reservation.domain.payment.pg.PgPaymentResult;
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public abstract class PgPaymentStrategy implements PaymentStrategy {
+public abstract class ExternalPaymentStrategy implements PaymentStrategy {
 
-    private final PgClient pgClient;
+    private final ExternalPaymentClient client;
 
     @Override
     public void pay(Payment payment, Order order) {
-        PgPaymentResult result = pgClient.pay(getPaymentMethod(), payment.getAmount());
+        PaymentResult result = client.pay(payment.getAmount());
 
         if (!result.success()) {
             payment.fail();
@@ -27,6 +27,6 @@ public abstract class PgPaymentStrategy implements PaymentStrategy {
 
     @Override
     public void cancel(Payment payment, Order order) {
-        pgClient.cancel(payment.getTransactionId());
+        client.cancel(payment.getTransactionId());
     }
 }

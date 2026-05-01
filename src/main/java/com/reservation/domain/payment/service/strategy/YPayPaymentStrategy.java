@@ -1,14 +1,14 @@
 package com.reservation.domain.payment.service.strategy;
 
+import com.reservation.domain.payment.client.YPayClient;
 import com.reservation.domain.payment.entity.PaymentMethod;
-import com.reservation.domain.payment.pg.PgClient;
 import org.springframework.stereotype.Component;
 
 @Component
-public class YPayPaymentStrategy extends PgPaymentStrategy {
+public class YPayPaymentStrategy extends ExternalPaymentStrategy {
 
-    public YPayPaymentStrategy(PgClient pgClient) {
-        super(pgClient);
+    public YPayPaymentStrategy(YPayClient yPayClient) {
+        super(yPayClient);
     }
 
     @Override
