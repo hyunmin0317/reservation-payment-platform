@@ -27,6 +27,11 @@ public class RedisStockService {
         }
     }
 
+    public void increase(Long productId) {
+        String key = STOCK_KEY_PREFIX + productId;
+        redisTemplate.opsForValue().increment(key);
+    }
+
     public void initStock(Long productId, int quantity) {
         String key = STOCK_KEY_PREFIX + productId;
         redisTemplate.opsForValue().set(key, String.valueOf(quantity));
