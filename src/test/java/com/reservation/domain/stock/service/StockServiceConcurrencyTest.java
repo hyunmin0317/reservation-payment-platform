@@ -19,6 +19,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -78,13 +79,18 @@ class StockServiceConcurrencyTest {
         CountDownLatch startLatch = new CountDownLatch(1);
         List<Callable<Boolean>> tasks = new ArrayList<>();
 
+        List<Long> latencies = Collections.synchronizedList(new ArrayList<>());
+
         for (int i = 0; i < requestCount; i++) {
             tasks.add(() -> {
                 startLatch.await();
+                long start = System.nanoTime();
                 try {
                     stockService.decreaseWithPessimisticLock(productId);
+                    latencies.add(System.nanoTime() - start);
                     return true;
                 } catch (GeneralException exception) {
+                    latencies.add(System.nanoTime() - start);
                     assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STOCK_SOLD_OUT);
                     return false;
                 }
@@ -117,12 +123,15 @@ class StockServiceConcurrencyTest {
         assertThat(failureCount).isEqualTo(requestCount - TOTAL_STOCK);
         assertThat(stock.getRemainingQuantity()).isZero();
 
+        List<Long> sortedLatencies = latencies.stream().sorted().toList();
+        long avgMs = sortedLatencies.stream().mapToLong(Long::longValue).sum() / sortedLatencies.size() / 1_000_000;
+        long maxMs = sortedLatencies.get(sortedLatencies.size() - 1) / 1_000_000;
+        long p95Ms = sortedLatencies.get((int) (sortedLatencies.size() * 0.95)) / 1_000_000;
+        long p99Ms = sortedLatencies.get((int) (sortedLatencies.size() * 0.99)) / 1_000_000;
+
         System.out.printf(
-                "Pessimistic lock concurrency test: requests=%d, success=%d, failure=%d, elapsedMs=%d%n",
-                requestCount,
-                successCount,
-                failureCount,
-                elapsedMillis
+                "Pessimistic lock: requests=%d, success=%d, failure=%d, totalMs=%d, avgMs=%d, p95Ms=%d, p99Ms=%d, maxMs=%d%n",
+                requestCount, successCount, failureCount, elapsedMillis, avgMs, p95Ms, p99Ms, maxMs
         );
     }
 }
