@@ -28,6 +28,7 @@ public enum ErrorCode {
     INVALID_PAYMENT_COMBINATION(400, "PAYMENT003", "외부 결제 수단은 하나만 사용할 수 있습니다."),
     PAYMENT_LIMIT_EXCEEDED(400, "PAYMENT004", "결제 한도를 초과했습니다."),
     PAYMENT_TIMEOUT(503, "PAYMENT005", "결제 요청 시간이 초과되었습니다."),
+    PAYMENT_SERVICE_UNAVAILABLE(503, "PAYMENT006", "결제 서비스를 일시적으로 이용할 수 없습니다."),
 
     // Order
     DUPLICATE_ORDER(409, "ORDER001", "이미 처리된 요청입니다."),
