@@ -6,6 +6,7 @@ import com.reservation.domain.payment.client.PaymentResult;
 import com.reservation.domain.payment.entity.Payment;
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 
@@ -24,6 +25,9 @@ public abstract class ExternalPaymentStrategy implements PaymentStrategy {
         PaymentResult result;
         try {
             result = circuitBreaker.executeSupplier(() -> client.pay(payment.getAmount()));
+        } catch (CallNotPermittedException e) {
+            payment.fail();
+            throw new GeneralException(ErrorCode.PAYMENT_SERVICE_UNAVAILABLE);
         } catch (Exception e) {
             payment.fail();
             throw new GeneralException(ErrorCode.PAYMENT_TIMEOUT);
