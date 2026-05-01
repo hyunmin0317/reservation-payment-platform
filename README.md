@@ -228,6 +228,8 @@ Content-Type: application/json
 
 ## ERD
 
+> 상세 ERD, 테이블 명세 및 DDL 스크립트는 [docs/erd.md](docs/erd.md)에서 확인할 수 있습니다.
+
 ```mermaid
 erDiagram
     PRODUCT {
