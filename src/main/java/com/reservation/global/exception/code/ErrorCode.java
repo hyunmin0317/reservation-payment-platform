@@ -22,6 +22,10 @@ public enum ErrorCode {
     STOCK_SOLD_OUT(409, "STOCK002", "재고가 부족합니다."),
     STOCK_EXCEEDED(409, "STOCK003", "재고가 총 수량을 초과할 수 없습니다."),
 
+    // Payment
+    PAYMENT_FAILED(500, "PAYMENT001", "결제에 실패했습니다."),
+    INSUFFICIENT_POINTS(400, "PAYMENT002", "포인트가 부족합니다."),
+
     // User
     USER_NOT_FOUND(404, "USER001", "사용자를 찾을 수 없습니다."),
     ;
