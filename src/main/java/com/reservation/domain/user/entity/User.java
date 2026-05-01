@@ -25,6 +25,14 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private int pointBalance;
 
+    public static User create(String name, String email, int pointBalance) {
+        User user = new User();
+        user.name = name;
+        user.email = email;
+        user.pointBalance = pointBalance;
+        return user;
+    }
+
     public void deductPoints(int amount) {
         if (this.pointBalance < amount) {
             throw new IllegalStateException("포인트가 부족합니다.");

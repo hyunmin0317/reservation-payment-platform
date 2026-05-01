@@ -6,19 +6,13 @@ import com.reservation.domain.stock.entity.Stock;
 import com.reservation.domain.stock.repository.StockRepository;
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
-import com.redis.testcontainers.RedisContainer;
+import com.reservation.support.IntegrationTestSupport;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.test.context.ActiveProfiles;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -33,19 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Testcontainers
-class StockServiceConcurrencyTest {
-
-    @Container
-    @ServiceConnection
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
-            .withDatabaseName("reservation_test");
-
-    @Container
-    @ServiceConnection
-    static RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:7"));
+class StockServiceConcurrencyTest extends IntegrationTestSupport {
 
     private static final int TOTAL_STOCK = 10;
 
@@ -59,6 +41,12 @@ class StockServiceConcurrencyTest {
     private RedisStockService redisStockService;
 
     @Autowired
+    private com.reservation.domain.payment.repository.PaymentRepository paymentRepository;
+
+    @Autowired
+    private com.reservation.domain.order.repository.OrderRepository orderRepository;
+
+    @Autowired
     private ProductRepository productRepository;
 
     @Autowired
@@ -68,6 +56,8 @@ class StockServiceConcurrencyTest {
 
     @BeforeEach
     void setUp() {
+        paymentRepository.deleteAll();
+        orderRepository.deleteAll();
         stockRepository.deleteAll();
         productRepository.deleteAll();
 
@@ -144,7 +134,9 @@ class StockServiceConcurrencyTest {
     }
 
     @Nested
+    @DisplayName("비관적 락")
     class PessimisticLock {
+        @DisplayName("초과판매 방지")
         @ParameterizedTest
         @ValueSource(ints = {100, 1000})
         void preventsOverselling(int requestCount) throws Exception {
@@ -157,7 +149,9 @@ class StockServiceConcurrencyTest {
     }
 
     @Nested
+    @DisplayName("낙관적 락")
     class OptimisticLock {
+        @DisplayName("초과판매 방지")
         @ParameterizedTest
         @ValueSource(ints = {100, 1000})
         void preventsOverselling(int requestCount) throws Exception {
@@ -170,12 +164,14 @@ class StockServiceConcurrencyTest {
     }
 
     @Nested
+    @DisplayName("Redis Lua 스크립트")
     class RedisLua {
         @BeforeEach
         void setUpRedis() {
             redisStockService.initStock(productId, TOTAL_STOCK);
         }
 
+        @DisplayName("초과판매 방지")
         @ParameterizedTest
         @ValueSource(ints = {100, 1000})
         void preventsOverselling(int requestCount) throws Exception {
