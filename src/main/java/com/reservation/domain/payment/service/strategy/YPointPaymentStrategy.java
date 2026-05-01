@@ -19,7 +19,7 @@ public class YPointPaymentStrategy implements PaymentStrategy {
     private final UserRepository userRepository;
 
     @Override
-    public PaymentMethod getPaymentMethod() {
+    public PaymentMethod getMethod() {
         return PaymentMethod.Y_POINT;
     }
 

@@ -12,7 +12,7 @@ public class YPayPaymentStrategy extends ExternalPaymentStrategy {
     }
 
     @Override
-    public PaymentMethod getPaymentMethod() {
+    public PaymentMethod getMethod() {
         return PaymentMethod.Y_PAY;
     }
 }

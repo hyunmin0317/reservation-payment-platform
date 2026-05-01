@@ -29,7 +29,7 @@ public class PaymentService {
     public PaymentService(PaymentRepository paymentRepository, List<PaymentStrategy> strategies) {
         this.paymentRepository = paymentRepository;
         this.strategyMap = strategies.stream()
-                .collect(Collectors.toMap(PaymentStrategy::getPaymentMethod, Function.identity()));
+                .collect(Collectors.toMap(PaymentStrategy::getMethod, Function.identity()));
     }
 
     @Transactional
@@ -43,11 +43,11 @@ public class PaymentService {
             for (PaymentRequest request : sorted) {
                 Payment payment = Payment.builder()
                         .order(order)
-                        .paymentMethod(request.paymentMethod())
+                        .method(request.method())
                         .amount(request.amount())
                         .build();
 
-                PaymentStrategy strategy = strategyMap.get(request.paymentMethod());
+                PaymentStrategy strategy = strategyMap.get(request.method());
                 strategy.pay(payment, order);
 
                 paymentRepository.save(payment);
@@ -63,7 +63,7 @@ public class PaymentService {
 
     private void validateCombination(List<PaymentRequest> requests) {
         long externalCount = requests.stream()
-                .filter(r -> r.paymentMethod().getType() == PaymentMethodType.EXTERNAL)
+                .filter(r -> r.method().getType() == PaymentMethodType.EXTERNAL)
                 .count();
 
         if (externalCount > 1) {
@@ -73,13 +73,13 @@ public class PaymentService {
 
     private List<PaymentRequest> sortInternalFirst(List<PaymentRequest> requests) {
         return requests.stream()
-                .sorted(Comparator.comparing(r -> r.paymentMethod().getType() == PaymentMethodType.INTERNAL ? 0 : 1))
+                .sorted(Comparator.comparing(r -> r.method().getType() == PaymentMethodType.INTERNAL ? 0 : 1))
                 .collect(Collectors.toList());
     }
 
     private void rollback(List<Payment> completedPayments, Order order) {
         for (Payment completed : completedPayments) {
-            PaymentStrategy strategy = strategyMap.get(completed.getPaymentMethod());
+            PaymentStrategy strategy = strategyMap.get(completed.getMethod());
             strategy.cancel(completed, order);
             completed.cancel();
             paymentRepository.save(completed);

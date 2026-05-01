@@ -6,7 +6,7 @@ import com.reservation.domain.payment.entity.PaymentMethod;
 
 public interface PaymentStrategy {
 
-    PaymentMethod getPaymentMethod();
+    PaymentMethod getMethod();
 
     void pay(Payment payment, Order order);
 
