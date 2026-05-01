@@ -26,20 +26,12 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
-    hibernate:
-      ddl-auto: create
     show-sql: true
 
   data:
     redis:
       host: localhost
       port: 6379
-
-  sql:
-    init:
-      mode: always
-      data-locations: classpath:data.sql
-    defer-datasource-initialization: true
 
 server:
   port: 8080
