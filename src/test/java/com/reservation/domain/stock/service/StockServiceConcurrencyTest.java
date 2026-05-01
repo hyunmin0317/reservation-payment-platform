@@ -1,5 +1,7 @@
 package com.reservation.domain.stock.service;
 
+import com.reservation.domain.order.repository.OrderRepository;
+import com.reservation.domain.payment.repository.PaymentRepository;
 import com.reservation.domain.product.entity.Product;
 import com.reservation.domain.product.repository.ProductRepository;
 import com.reservation.domain.stock.entity.Stock;
@@ -41,10 +43,10 @@ class StockServiceConcurrencyTest extends IntegrationTestSupport {
     private RedisStockService redisStockService;
 
     @Autowired
-    private com.reservation.domain.payment.repository.PaymentRepository paymentRepository;
+    private PaymentRepository paymentRepository;
 
     @Autowired
-    private com.reservation.domain.order.repository.OrderRepository orderRepository;
+    private OrderRepository orderRepository;
 
     @Autowired
     private ProductRepository productRepository;

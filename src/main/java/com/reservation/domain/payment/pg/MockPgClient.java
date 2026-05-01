@@ -10,8 +10,7 @@ public class MockPgClient implements PgClient {
 
     @Override
     public PgPaymentResult pay(PaymentMethod method, int amount) {
-        String transactionId = "TXN-" + UUID.randomUUID().toString().substring(0, 8);
-        return PgPaymentResult.success(transactionId);
+        return PgPaymentResult.success(UUID.randomUUID().toString());
     }
 
     @Override
