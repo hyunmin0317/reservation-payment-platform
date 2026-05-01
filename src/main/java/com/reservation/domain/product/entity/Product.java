@@ -31,4 +31,14 @@ public class Product extends BaseEntity {
 
     @Column(length = 500)
     private String description;
+
+    public static Product create(String name, int price, LocalTime checkInTime, LocalTime checkOutTime, String description) {
+        Product product = new Product();
+        product.name = name;
+        product.price = price;
+        product.checkInTime = checkInTime;
+        product.checkOutTime = checkOutTime;
+        product.description = description;
+        return product;
+    }
 }
