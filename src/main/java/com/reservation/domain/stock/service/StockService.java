@@ -27,4 +27,12 @@ public class StockService {
 
         stock.decrease();
     }
+
+    @Transactional
+    public void decreaseWithOptimisticLock(Long productId) {
+        Stock stock = stockRepository.findByProductId(productId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.STOCK_NOT_FOUND));
+
+        stock.decrease();
+    }
 }
