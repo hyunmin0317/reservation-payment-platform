@@ -155,7 +155,41 @@ public interface PaymentStrategy {
 
 ## 쟁점 7. 트랜잭션 범위 및 보상 전략
 
-> Phase 7에서 작성 예정
+> 예약 플로우는 Redis, DB, 외부 결제 등 서로 다른 저장소에 걸쳐 있어 하나의 ACID 트랜잭션으로 묶을 수 없는 상황에서 일관성을 보장하는 방법
+
+### 예약 플로우
+
+```
+Redis 재고 차감 → [DB 트랜잭션: 주문 생성 → 결제 → DB 재고 차감 → 주문 확정] → Redis 멱등성 키 저장
+```
+
+### 트랜잭션 경계 설계
+
+`BookingService`(비트랜잭션)가 전체 흐름을 조율하고, `OrderTransactionService`(@Transactional)가 DB 작업을 묶습니다.
+
+| 구간 | 트랜잭션 범위 | 이유 |
+|------|-------------|------|
+| Redis 재고 차감 | 트랜잭션 외부 | Redis는 DB 트랜잭션에 참여할 수 없음 |
+| 주문 생성 → 결제 → DB 재고 차감 → 주문 확정 | @Transactional | DB 작업은 원자적으로 처리 |
+| Redis 멱등성 키 저장 | 트랜잭션 외부 | 주문 확정 후에만 저장 |
+
+self-invocation 시 Spring AOP 프록시가 동작하지 않는 문제를 방지하기 위해 `OrderTransactionService`를 별도 클래스로 분리하였습니다.
+
+### 실패 시나리오별 보상 전략
+
+| 실패 지점 | 보상 동작 |
+|----------|---------|
+| 결제 중 포인트 부족 | Redis 재고 복구 (INCR) |
+| 결제 중 외부 결제 실패 | 포인트 환불 + Redis 재고 복구 |
+| DB 저장 실패 | 결제 취소 + 포인트 환불 + Redis 재고 복구 (DB는 트랜잭션 롤백) |
+
+결제 내부의 보상(포인트 환불, 외부 결제 취소)은 `PaymentService.rollback()`이 Strategy별 `cancel()`로 처리하고, Redis 재고 복구와 주문 상태 변경은 `BookingService`에서 처리합니다.
+
+### 선택 근거
+
+- 분산 트랜잭션(2PC)은 구현 복잡도와 성능 부담이 큼
+- 보상 트랜잭션 방식은 각 단계의 실패 시 이전 단계를 역으로 되돌리는 Saga 패턴과 유사
+- `catch (Exception e)`로 모든 예외를 포착하여 Redis 재고가 누락 없이 복구되도록 보장
 
 ---
 
