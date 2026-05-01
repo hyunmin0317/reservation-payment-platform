@@ -25,6 +25,7 @@ public enum ErrorCode {
     // Payment
     PAYMENT_FAILED(500, "PAYMENT001", "결제에 실패했습니다."),
     INSUFFICIENT_POINTS(400, "PAYMENT002", "포인트가 부족합니다."),
+    INVALID_PAYMENT_COMBINATION(400, "PAYMENT003", "신용카드와 Y페이는 함께 사용할 수 없습니다."),
 
     // User
     USER_NOT_FOUND(404, "USER001", "사용자를 찾을 수 없습니다."),
