@@ -8,7 +8,6 @@ import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 
 public abstract class ExternalPaymentStrategy implements PaymentStrategy {
 
@@ -25,9 +24,6 @@ public abstract class ExternalPaymentStrategy implements PaymentStrategy {
         PaymentResult result;
         try {
             result = circuitBreaker.executeSupplier(() -> client.pay(payment.getAmount()));
-        } catch (CallNotPermittedException e) {
-            payment.fail();
-            throw new GeneralException(ErrorCode.PAYMENT_TIMEOUT);
         } catch (Exception e) {
             payment.fail();
             throw new GeneralException(ErrorCode.PAYMENT_TIMEOUT);
