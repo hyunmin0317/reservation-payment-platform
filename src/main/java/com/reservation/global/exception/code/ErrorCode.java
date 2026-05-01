@@ -14,6 +14,9 @@ public enum ErrorCode {
     NOT_FOUND(404, "COMMON003", "요청한 리소스를 찾을 수 없습니다."),
     VALIDATION_FAILED(400, "COMMON004", "입력값에 대한 검증에 실패했습니다."),
 
+    // Rate Limit
+    RATE_LIMIT_EXCEEDED(429, "COMMON005", "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."),
+
     // Product
     PRODUCT_NOT_FOUND(404, "PRODUCT001", "상품을 찾을 수 없습니다."),
 
