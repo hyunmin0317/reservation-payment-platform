@@ -131,7 +131,41 @@ public interface PaymentStrategy {
 
 ## 쟁점 3. 멱등성 처리 전략
 
-> Phase 7에서 작성 예정
+> 사용자가 결제 버튼을 빠르게 연속 클릭하거나, 네트워크 오류로 요청이 재전송되는 경우 중복 결제를 방지하는 방법
+
+### 검토한 방식
+
+| 방식 | 핵심 원리 |
+|------|---------|
+| DB UNIQUE 제약조건 | `orders.idempotency_key`에 UNIQUE 제약 |
+| Redis 기반 멱등성 키 | Redis에 키 저장 (TTL 24h), O(1) 조회 |
+| 서버 메모리 캐시 | 서버 내 Map에 키 저장 |
+
+### 최종 선택: Redis 기반 멱등성 키 + DB UNIQUE Fallback
+
+**선택 근거**
+
+- 멱등성 체크는 모든 Booking 요청의 첫 단계이므로 속도가 중요 → Redis O(1) 조회
+- TTL 24시간으로 불필요한 키가 자동 정리됨
+- 분산 환경(서버 2대)에서 동일한 Redis를 바라보므로, 어느 서버로 요청이 들어와도 중복 체크 가능
+- 서버 메모리 캐시는 분산 환경에서 서버 간 공유 불가 → 제외
+
+**Redis 장애 시 Fallback**
+
+- `IdempotencyService.exists()`: Redis 장애 시 DB에서 `idempotency_key`로 기존 주문 존재 여부 확인
+- `IdempotencyService.save()`: Redis 장애 시 저장 생략 — DB UNIQUE 제약조건이 중복 삽입 방지
+- 클라이언트가 `Idempotency-Key` 헤더로 UUID를 전송하는 표준 방식 채택
+
+**처리 흐름**
+
+1. Redis에서 멱등성 키 존재 확인
+2. 존재 → DB에서 기존 주문 조회 후 반환
+3. 미존재 → 예약 플로우 진행 → 성공 시 Redis에 키 저장 (TTL 24h)
+
+**트레이드오프**
+
+- Redis와 DB 양쪽에 멱등성 체크 수단을 두어 단일 장애점 제거
+- TTL 24시간 이후 같은 키로 재요청하면 새 주문이 생성될 수 있으나, 24시간 이후 동일 키 재사용은 실무적으로 발생하지 않는 시나리오
 
 ---
 
