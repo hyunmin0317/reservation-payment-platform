@@ -22,7 +22,7 @@ public class RedisStockService {
         String key = STOCK_KEY_PREFIX + productId;
         Long result = redisTemplate.execute(decreaseStockScript, List.of(key));
 
-        if (result == null || result == 0L) {
+        if (result == 0L) {
             throw new GeneralException(ErrorCode.STOCK_SOLD_OUT);
         }
     }
