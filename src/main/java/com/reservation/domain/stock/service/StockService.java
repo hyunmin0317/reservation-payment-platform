@@ -22,7 +22,7 @@ public class StockService {
 
     @Transactional
     public void decreaseWithPessimisticLock(Long productId) {
-        Stock stock = stockRepository.findByProductIdWithPessimisticLock(productId)
+        Stock stock = stockRepository.findWithLockByProductId(productId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.STOCK_NOT_FOUND));
 
         stock.decrease();
