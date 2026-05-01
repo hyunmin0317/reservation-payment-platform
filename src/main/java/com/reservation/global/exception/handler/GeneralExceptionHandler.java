@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
 
@@ -46,6 +47,12 @@ public class GeneralExceptionHandler {
     protected ResponseEntity<ErrorResponse<Void>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex) {
         log.warn("{} : {}", ex.getClass().getSimpleName(), ex.getMessage());
         return ErrorResponse.handle(ErrorCode.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    protected ResponseEntity<ErrorResponse<Void>> handleNoResourceFoundException(NoResourceFoundException ex) {
+        log.warn("{} : {}", ex.getClass().getSimpleName(), ex.getMessage());
+        return ErrorResponse.handle(ErrorCode.NOT_FOUND);
     }
 
     @ExceptionHandler(Exception.class)
