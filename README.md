@@ -97,13 +97,13 @@ docker-compose up -d
 > 실제 환경에서는 `Authorization` 헤더의 토큰으로 사용자를 식별하지만,
 > 이를 대체하여 커스텀 헤더 `X-User-Id`로 사용자 ID를 직접 전달받는 방식을 사용합니다.
 
-### 1. GET /api/checkout/{productId} - 주문서 진입
+### 1. GET /api/checkout/products/{productId} - 주문서 진입
 
 상품 정보 및 사용자의 가용 포인트를 조회합니다.
 
 **Request**
 ```
-GET /api/checkout/{productId}
+GET /api/checkout/products/{productId}
 X-User-Id: {userId}
 ```
 
