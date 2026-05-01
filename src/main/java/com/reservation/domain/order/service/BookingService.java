@@ -39,14 +39,16 @@ public class BookingService {
         Product product = productService.getProduct(request.productId());
         User user = userService.getUser(userId);
 
-        redisStockService.decrease(product.getId());
+        boolean redisUsed = redisStockService.decrease(product.getId());
 
         try {
-            OrderResult result = orderTransactionService.process(user, product, idempotencyKey, request);
+            OrderResult result = orderTransactionService.process(user, product, idempotencyKey, request, redisUsed);
             idempotencyService.save(idempotencyKey);
             return BookingResponse.of(result.order(), result.payments());
         } catch (Exception e) {
-            redisStockService.increase(product.getId());
+            if (redisUsed) {
+                redisStockService.increase(product.getId());
+            }
             orderTransactionService.markFailed(idempotencyKey);
             throw e;
         }
