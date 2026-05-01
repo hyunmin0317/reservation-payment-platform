@@ -1,0 +1,45 @@
+package com.reservation.domain.stock.entity;
+
+import com.reservation.domain.product.entity.Product;
+import com.reservation.global.common.entity.BaseEntity;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Stock extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", nullable = false, unique = true)
+    private Product product;
+
+    @Column(nullable = false)
+    private int totalQuantity;
+
+    @Column(nullable = false)
+    private int remainingQuantity;
+
+    @Version
+    private int version;
+
+    public void decrease() {
+        if (this.remainingQuantity <= 0) {
+            throw new IllegalStateException("재고가 부족합니다.");
+        }
+        this.remainingQuantity--;
+    }
+
+    public void increase() {
+        if (this.remainingQuantity >= this.totalQuantity) {
+            throw new IllegalStateException("재고가 총 수량을 초과할 수 없습니다.");
+        }
+        this.remainingQuantity++;
+    }
+}
