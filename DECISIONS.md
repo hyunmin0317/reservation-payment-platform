@@ -137,7 +137,43 @@ public interface PaymentStrategy {
 
 ## 쟁점 4. Redis 장애 Fallback 전략
 
-> Phase 8에서 작성 예정
+> Redis가 장애 상태일 때 서비스 중단 없이 핵심 기능을 유지하는 방법
+
+### 검토한 방식
+
+| 방식 | 핵심 원리 |
+|------|---------|
+| 서비스 중단 (fail-fast) | Redis 장애 시 즉시 에러 반환 |
+| DB Fallback | Redis 장애 감지 → DB 비관적 락으로 자동 전환 |
+| 로컬 캐시 Fallback | 서버 메모리에 재고 캐싱 |
+
+### 최종 선택: DB Fallback (비관적 락)
+
+**선택 근거**
+
+- 00시 프로모션 시간에 Redis 장애가 나면 매출 손실이 크므로, 성능 저하를 감수하더라도 서비스를 지속하는 것이 유리
+- 로컬 캐시는 분산 환경(서버 2대)에서 재고 정합성을 보장할 수 없음
+- DB 비관적 락은 단일 row 경합에서 낙관적 락보다 효율적 — 재고 10개에 1000TPS가 몰리면 성공률 1%이므로 낙관적 락의 재시도 비용이 폭증
+- Redis 복구 시 별도 전환 작업 없이 자동으로 Redis 모드로 복귀
+
+**Fallback 범위**
+
+| 기능 | 정상 시 | Redis 장애 시 |
+|------|---------|-------------|
+| 재고 관리 | Redis Lua Script | DB 비관적 락 |
+| 멱등성 체크 | Redis GET | DB UNIQUE 제약조건 |
+| 멱등성 저장 | Redis SET (TTL 24h) | 생략 (DB UNIQUE로 보장) |
+
+**구현 방식**
+
+- `RedisConnectionFailureException` catch로 장애 감지
+- `RedisStockService.decrease()`가 `boolean`(Redis 사용 여부)을 반환하여 보상 트랜잭션 시 Redis 복구 필요 여부를 판단
+- DB Fallback으로 재고를 이미 차감한 경우, `OrderTransactionService`에서 DB 재고 중복 차감을 방지
+
+**트레이드오프**
+
+- DB Fallback 시 성능 저하는 불가피하나, 재고 10개가 빠르게 소진되므로 실제 락 경합 시간은 짧음
+- 매 요청마다 Redis를 먼저 시도하므로 Redis 복구 시 자동으로 정상 모드 복귀
 
 ---
 
