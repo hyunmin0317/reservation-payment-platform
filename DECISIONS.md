@@ -185,7 +185,39 @@ public interface PaymentStrategy {
 
 ## 쟁점 6. 결제 실패 케이스별 대응 전략
 
-> Phase 8에서 작성 예정
+> 외부 결제 연동 장애 시 서버 전체가 멈추지 않도록 보호하는 방법
+
+### 결제 실패 케이스 분류
+
+| 실패 유형 | 원인 | ErrorCode | HTTP |
+|----------|------|-----------|------|
+| 한도 초과 | 사용자 결제 한도 초과 | PAYMENT_LIMIT_EXCEEDED | 400 |
+| 타임아웃 | PG/Y페이 응답 지연 | PAYMENT_TIMEOUT | 503 |
+| 네트워크 오류 | 연결 실패, 예외 발생 | PAYMENT_TIMEOUT | 503 |
+| 서킷 오픈 | 장애 누적으로 서킷브레이커 차단 | PAYMENT_TIMEOUT | 503 |
+| 기타 실패 | 그 외 거절 사유 | PAYMENT_FAILED | 500 |
+
+### 서킷브레이커 (Resilience4j)
+
+`ExternalPaymentStrategy`에서 외부 결제 클라이언트 호출을 `CircuitBreaker.executeSupplier()`로 감싸 장애 전파를 방지합니다.
+
+**설정값 및 근거**
+
+| 설정 | 값 | 근거 |
+|------|---|------|
+| sliding-window-type | COUNT_BASED | 요청 수 기반이 시간 기반보다 직관적 |
+| sliding-window-size | 10 | 최근 10건 기준으로 판단 |
+| failure-rate-threshold | 50% | 10건 중 5건 실패 시 서킷 오픈 |
+| wait-duration-in-open-state | 10s | 10초 후 반오픈 상태로 전환 |
+| permitted-number-of-calls-in-half-open-state | 3 | 3건 시도하여 복구 여부 판단 |
+| minimum-number-of-calls | 5 | 최소 5건 이후부터 실패율 계산 |
+
+**서킷 OPEN 시 동작**: `CallNotPermittedException` → 외부 호출 없이 즉시 `PAYMENT_TIMEOUT` 반환 → 스레드 점유 방지
+
+**트레이드오프**
+
+- 서킷 오픈 중에는 정상 요청도 즉시 실패하지만, PG 장애 상태에서 어차피 실패할 요청으로 서버 자원을 낭비하는 것보다 나음
+- 재고는 이미 Redis에서 차감된 상태이므로 보상 트랜잭션으로 복구
 
 ---
 
