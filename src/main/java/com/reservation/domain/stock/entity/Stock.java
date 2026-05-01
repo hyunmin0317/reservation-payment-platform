@@ -48,7 +48,7 @@ public class Stock extends BaseEntity {
 
     public void increase() {
         if (this.remainingQuantity >= this.totalQuantity) {
-            throw new IllegalStateException("재고가 총 수량을 초과할 수 없습니다.");
+            throw new GeneralException(ErrorCode.STOCK_EXCEEDED);
         }
         this.remainingQuantity++;
     }

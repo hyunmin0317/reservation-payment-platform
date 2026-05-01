@@ -20,6 +20,7 @@ public enum ErrorCode {
     // Stock
     STOCK_NOT_FOUND(404, "STOCK001", "재고 정보를 찾을 수 없습니다."),
     STOCK_SOLD_OUT(409, "STOCK002", "재고가 부족합니다."),
+    STOCK_EXCEEDED(409, "STOCK003", "재고가 총 수량을 초과할 수 없습니다."),
 
     // User
     USER_NOT_FOUND(404, "USER001", "사용자를 찾을 수 없습니다."),
