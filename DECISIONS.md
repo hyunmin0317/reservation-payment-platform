@@ -211,6 +211,12 @@ public interface PaymentStrategy {
 - `RedisStockService.decrease()`가 `boolean`(Redis 사용 여부)을 반환하여 보상 트랜잭션 시 Redis 복구 필요 여부를 판단
 - DB Fallback으로 재고를 이미 차감한 경우, `OrderTransactionService`에서 DB 재고 중복 차감을 방지
 
+**Redis 재고 초기화 (`StockInitializer`)**
+
+- 애플리케이션 시작 시 `ApplicationRunner`로 DB 재고를 Redis에 동기화
+- 분산 환경(서버 2대)에서 두 서버가 동시에 `initStock`을 호출하지만, Redis `SET`은 멱등 연산이므로 동일한 값을 덮어쓸 뿐 정합성에 영향 없음
+- 별도의 분산 락이나 리더 선출 없이도 안전하게 동작하여 불필요한 복잡도를 피함
+
 **트레이드오프**
 
 - DB Fallback 시 성능 저하는 불가피하나, 재고 10개가 빠르게 소진되므로 실제 락 경합 시간은 짧음
