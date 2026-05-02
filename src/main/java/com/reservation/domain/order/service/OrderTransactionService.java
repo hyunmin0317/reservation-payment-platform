@@ -44,12 +44,6 @@ public class OrderTransactionService {
         return new OrderResult(order, payments);
     }
 
-    @Transactional
-    public void markFailed(String idempotencyKey) {
-        orderRepository.findByIdempotencyKey(idempotencyKey)
-                .ifPresent(Order::fail);
-    }
-
     public record OrderResult(Order order, List<Payment> payments) {
     }
 }
