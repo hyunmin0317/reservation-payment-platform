@@ -32,7 +32,7 @@ public class BookingService {
     private final IdempotencyService idempotencyService;
 
     public BookingResponse book(Long userId, String idempotencyKey, BookingRequest request) {
-        if (idempotencyService.exists(idempotencyKey)) {
+        if (!idempotencyService.tryAcquire(idempotencyKey)) {
             return getExistingOrder(idempotencyKey);
         }
 
@@ -43,12 +43,12 @@ public class BookingService {
 
         try {
             OrderResult result = orderTransactionService.process(user, product, idempotencyKey, request, redisUsed);
-            idempotencyService.save(idempotencyKey);
             return BookingResponse.of(result.order(), result.payments());
         } catch (Exception e) {
             if (redisUsed) {
                 redisStockService.increase(product.getId());
             }
+            idempotencyService.release(idempotencyKey);
             orderTransactionService.markFailed(idempotencyKey);
             throw e;
         }
