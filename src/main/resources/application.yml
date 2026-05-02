@@ -13,6 +13,14 @@ spring:
   jackson:
     property-naming-strategy: LOWER_CAMEL_CASE
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
 resilience4j:
   circuitbreaker:
     instances:
