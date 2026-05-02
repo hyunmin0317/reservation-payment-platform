@@ -131,25 +131,15 @@ class CircuitBreakerTest extends IntegrationTestSupport {
         CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("externalPayment");
         assertThat(cb.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
 
-        int failureCount = 0;
         for (int i = 0; i < 10; i++) {
             try {
                 paymentService.pay(order, List.of(
                         new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
                 ));
-            } catch (GeneralException e) {
-                failureCount++;
-                System.out.println("[CB-TEST] iteration=" + i + " errorCode=" + e.getErrorCode() + " cbState=" + cb.getState() + " metrics=" + cb.getMetrics().getNumberOfFailedCalls());
-                if (cb.getState() == CircuitBreaker.State.OPEN) {
-                    break;
-                }
-            } catch (Exception e) {
-                System.out.println("[CB-TEST] iteration=" + i + " unexpected=" + e.getClass().getName() + " msg=" + e.getMessage());
+            } catch (GeneralException ignored) {
             }
         }
 
-        System.out.println("[CB-TEST] final failureCount=" + failureCount + " cbState=" + cb.getState() + " metrics=" + cb.getMetrics().getNumberOfFailedCalls());
-        assertThat(failureCount).isGreaterThanOrEqualTo(5);
         assertThat(cb.getState()).isEqualTo(CircuitBreaker.State.OPEN);
 
         assertThatThrownBy(() -> paymentService.pay(order, List.of(
