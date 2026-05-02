@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 class CircuitBreakerTest extends IntegrationTestSupport {
 
     @Autowired
@@ -131,15 +131,21 @@ class CircuitBreakerTest extends IntegrationTestSupport {
         CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("externalPayment");
         assertThat(cb.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
 
+        int failureCount = 0;
         for (int i = 0; i < 10; i++) {
             try {
                 paymentService.pay(order, List.of(
                         new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
                 ));
-            } catch (GeneralException ignored) {
+            } catch (GeneralException e) {
+                failureCount++;
+                if (cb.getState() == CircuitBreaker.State.OPEN) {
+                    break;
+                }
             }
         }
 
+        assertThat(failureCount).isGreaterThanOrEqualTo(5);
         assertThat(cb.getState()).isEqualTo(CircuitBreaker.State.OPEN);
 
         assertThatThrownBy(() -> paymentService.pay(order, List.of(
