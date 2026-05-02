@@ -28,9 +28,6 @@ public class Stock extends BaseEntity {
     @Column(nullable = false)
     private int remainingQuantity;
 
-    @Version
-    private int version;
-
     public static Stock create(Product product, int totalQuantity) {
         Stock stock = new Stock();
         stock.product = product;

@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS stock (
     product_id BIGINT NOT NULL UNIQUE,
     total_quantity INT NOT NULL,
     remaining_quantity INT NOT NULL,
-    version INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_stock_product FOREIGN KEY (product_id) REFERENCES product (id)
@@ -70,12 +69,12 @@ VALUES ('제주 오션뷰 디럭스', 150000, '15:00', '11:00', '제주 바다�
        ('강릉 경포 풀빌라', 250000, '15:00', '11:00', '경포호수 전망의 프라이빗 풀빌라'),
        ('여수 마린뷰 패밀리', 170000, '15:00', '12:00', '여수 밤바다를 감상할 수 있는 패밀리룸');
 
-INSERT INTO stock (product_id, total_quantity, remaining_quantity, version)
-VALUES (1, 10, 10, 0),
-       (2, 10, 10, 0),
-       (3, 10, 10, 0),
-       (4, 10, 10, 0),
-       (5, 10, 10, 0);
+INSERT INTO stock (product_id, total_quantity, remaining_quantity)
+VALUES (1, 10, 10),
+       (2, 10, 10),
+       (3, 10, 10),
+       (4, 10, 10),
+       (5, 10, 10);
 
 INSERT INTO users (name, email, point_balance)
 VALUES ('김철수', 'kim@example.com', 100000),
