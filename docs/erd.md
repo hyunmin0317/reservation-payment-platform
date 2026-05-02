@@ -21,7 +21,7 @@ erDiagram
         bigint product_id FK "상품 ID (UNIQUE)"
         int total_quantity "총 수량"
         int remaining_quantity "잔여 수량"
-        int version "낙관적 락 버전"
+        int version "낙관적 락 버전 (벤치마크 비교용)"
         datetime created_at "생성일시"
         datetime updated_at "수정일시"
     }
@@ -90,7 +90,7 @@ erDiagram
 | product_id | BIGINT | FK, UNIQUE, NOT NULL | 상품 ID |
 | total_quantity | INT | NOT NULL | 총 수량 |
 | remaining_quantity | INT | NOT NULL | 잔여 수량 |
-| version | INT | NOT NULL, DEFAULT 0 | 낙관적 락 버전 (Redis Fallback 시 사용) |
+| version | INT | NOT NULL, DEFAULT 0 | 낙관적 락 버전 (벤치마크 비교용) |
 | created_at | DATETIME | NOT NULL | 생성일시 |
 | updated_at | DATETIME | NOT NULL | 수정일시 |
 
