@@ -44,9 +44,10 @@ public class BookingService {
         }
         User user = userService.getUser(userId);
 
-        boolean redisUsed = redisStockService.decrease(product.getId());
+        boolean redisUsed = false;
 
         try {
+            redisUsed = redisStockService.decrease(product.getId());
             OrderResult result = orderTransactionService.process(user, product, idempotencyKey, request, redisUsed);
             return BookingResponse.of(result.order(), result.payments());
         } catch (DataIntegrityViolationException e) {
