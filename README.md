@@ -112,6 +112,7 @@ X-User-Id: {userId}
   "checkOutTime": "11:00",
   "description": "제주도 오션뷰 스위트룸",
   "remainingStock": 7,
+  "saleStartTime": "00:00",
   "userPoint": 10000
 }
 ```
@@ -181,6 +182,8 @@ Content-Type: application/json
 | 400 | `PAYMENT002` | 포인트 부족 |
 | 400 | `PAYMENT003` | 외부 결제 수단은 하나만 사용 가능 |
 | 400 | `PAYMENT004` | 결제 한도 초과 |
+| 400 | `PAYMENT007` | 결제 금액 합계 불일치 |
+| 403 | `PRODUCT002` | 아직 판매가 시작되지 않음 |
 | 404 | `PRODUCT001` | 상품을 찾을 수 없음 |
 | 404 | `USER001` | 사용자를 찾을 수 없음 |
 | 409 | `STOCK002` | 재고 부족 |
@@ -238,6 +241,7 @@ erDiagram
         time check_in_time
         time check_out_time
         varchar description
+        time sale_start_time
         datetime created_at
         datetime updated_at
     }
@@ -323,33 +327,41 @@ sequenceDiagram
 
     C->>S: POST /api/bookings (Idempotency-Key)
 
-    %% 멱등성 체크
-    S->>R: 멱등성 키 확인
+    %% 멱등성 체크 (SETNX)
+    S->>R: 멱등성 키 선점 (SETNX, TTL 24h)
     alt 이미 처리된 요청
-        R-->>S: 기존 결과 반환
+        R-->>S: 선점 실패
         S-->>C: 기존 주문 응답
+    end
+
+    %% 오픈 시간 검증
+    S->>DB: 상품 조회
+    alt 판매 시작 전
+        S->>R: 멱등성 키 해제
+        S-->>C: 403 판매 시작 전
     end
 
     %% 재고 차감
     S->>R: Lua 스크립트로 재고 차감 (DECR)
     alt 재고 부족
         R-->>S: 재고 없음
+        S->>R: 멱등성 키 해제
         S-->>C: 409 재고 부족 응답
     end
 
     %% 결제 처리
     S->>DB: 주문 생성 (PENDING)
+    S->>DB: 결제 금액 합계 검증
     S->>PG: 결제 승인 요청
     alt 결제 성공
         PG-->>S: 승인 완료
         S->>DB: 주문 상태 변경 (COMPLETED)
         S->>DB: DB 재고 차감
-        S->>R: 멱등성 키 저장
         S-->>C: 200 예약 완료
     else 결제 실패
         PG-->>S: 승인 실패
         S->>R: Redis 재고 복구 (INCR)
-        S->>DB: 주문 상태 변경 (FAILED)
+        S->>R: 멱등성 키 해제
         S-->>C: 400 결제 실패 응답
     end
 ```
