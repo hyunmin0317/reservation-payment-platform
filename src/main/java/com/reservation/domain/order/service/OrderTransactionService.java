@@ -34,7 +34,7 @@ public class OrderTransactionService {
                 .build();
         orderRepository.save(order);
 
-        List<Payment> payments = paymentService.pay(order, request.payments());
+        List<Payment> payments = paymentService.pay(order, request.payments(), product.getPrice());
 
         if (decreaseDbStock) {
             stockService.decreaseWithPessimisticLock(product.getId());

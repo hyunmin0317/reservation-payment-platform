@@ -32,7 +32,8 @@ public class PaymentService {
     }
 
     @Transactional
-    public List<Payment> pay(Order order, List<PaymentRequest> requests) {
+    public List<Payment> pay(Order order, List<PaymentRequest> requests, int productPrice) {
+        validateTotalAmount(requests, productPrice);
         validateCombination(requests);
 
         List<PaymentRequest> sorted = sortInternalFirst(requests);
@@ -58,6 +59,13 @@ public class PaymentService {
         }
 
         return completedPayments;
+    }
+
+    private void validateTotalAmount(List<PaymentRequest> requests, int productPrice) {
+        int totalPayment = requests.stream().mapToInt(PaymentRequest::amount).sum();
+        if (totalPayment != productPrice) {
+            throw new GeneralException(ErrorCode.INVALID_PAYMENT_AMOUNT);
+        }
     }
 
     private void validateCombination(List<PaymentRequest> requests) {
