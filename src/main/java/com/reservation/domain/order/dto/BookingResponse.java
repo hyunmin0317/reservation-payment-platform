@@ -25,6 +25,7 @@ public record BookingResponse(
         @Schema(description = "결제 내역 목록")
         List<PaymentResponse> payments
 ) {
+
     public static BookingResponse of(Order order, List<Payment> payments) {
         return new BookingResponse(
                 order.getId(),

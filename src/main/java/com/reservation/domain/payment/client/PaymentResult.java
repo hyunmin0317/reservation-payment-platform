@@ -7,6 +7,7 @@ public record PaymentResult(
         String transactionId,
         ErrorCode errorCode
 ) {
+
     public static PaymentResult success(String transactionId) {
         return new PaymentResult(true, transactionId, null);
     }
