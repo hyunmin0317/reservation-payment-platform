@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
@@ -45,6 +46,12 @@ public class GeneralExceptionHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     protected ResponseEntity<ErrorResponse<Void>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex) {
+        log.warn("{} : {}", ex.getClass().getSimpleName(), ex.getMessage());
+        return ErrorResponse.handle(ErrorCode.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    protected ResponseEntity<ErrorResponse<Void>> handleMissingRequestHeaderException(MissingRequestHeaderException ex) {
         log.warn("{} : {}", ex.getClass().getSimpleName(), ex.getMessage());
         return ErrorResponse.handle(ErrorCode.BAD_REQUEST);
     }
