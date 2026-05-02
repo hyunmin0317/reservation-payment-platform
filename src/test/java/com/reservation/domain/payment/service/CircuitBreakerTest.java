@@ -62,7 +62,9 @@ class CircuitBreakerTest extends IntegrationTestSupport {
         productRepository.deleteAll();
         userRepository.deleteAll();
 
-        circuitBreakerRegistry.circuitBreaker("externalPayment").reset();
+        CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("externalPayment");
+        cb.transitionToClosedState();
+        cb.reset();
 
         User user = userRepository.saveAndFlush(User.create("테스트유저", "test@test.com", 50000));
         Product product = productRepository.saveAndFlush(Product.create(
@@ -124,6 +126,9 @@ class CircuitBreakerTest extends IntegrationTestSupport {
         when(pgClient.pay(anyInt())).thenThrow(new RuntimeException("PG down"));
 
         CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("externalPayment");
+        cb.transitionToClosedState();
+        cb.reset();
+        assertThat(cb.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
 
         for (int i = 0; i < 10; i++) {
             try {
