@@ -5,6 +5,17 @@
 
 ---
 
+## 문서
+
+| 문서 | 설명 |
+|------|------|
+| [DECISIONS.md](DECISIONS.md) | 주요 기술적 쟁점과 선택 근거 |
+| [docs/erd.md](docs/erd.md) | ERD, 테이블 명세 및 DDL 스크립트 |
+| [docs/sequence-diagrams.md](docs/sequence-diagrams.md) | 상세 시퀀스 다이어그램 |
+| [docs/AI_USAGE.md](docs/AI_USAGE.md) | AI 활용 기록 |
+
+---
+
 ## 기술 스택
 
 | 구분 | 기술 |
