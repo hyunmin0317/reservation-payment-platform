@@ -9,6 +9,7 @@ import com.reservation.domain.payment.entity.PaymentStatus;
 import com.reservation.domain.payment.repository.PaymentRepository;
 import com.reservation.domain.product.entity.Product;
 import com.reservation.domain.product.repository.ProductRepository;
+import com.reservation.domain.stock.repository.StockRepository;
 import com.reservation.domain.user.entity.User;
 import com.reservation.domain.user.repository.UserRepository;
 import com.reservation.global.exception.GeneralException;
@@ -43,6 +44,9 @@ class PaymentServiceTest extends IntegrationTestSupport {
     @Autowired
     private PaymentRepository paymentRepository;
 
+    @Autowired
+    private StockRepository stockRepository;
+
     private Order order;
     private User user;
 
@@ -50,6 +54,7 @@ class PaymentServiceTest extends IntegrationTestSupport {
     void setUp() {
         paymentRepository.deleteAll();
         orderRepository.deleteAll();
+        stockRepository.deleteAll();
         productRepository.deleteAll();
         userRepository.deleteAll();
 
