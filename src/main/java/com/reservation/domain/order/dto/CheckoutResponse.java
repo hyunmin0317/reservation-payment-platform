@@ -1,7 +1,6 @@
 package com.reservation.domain.order.dto;
 
 import com.reservation.domain.product.entity.Product;
-import com.reservation.domain.stock.entity.Stock;
 import com.reservation.domain.user.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -34,7 +33,7 @@ public record CheckoutResponse(
         int userPoint
 ) {
 
-    public static CheckoutResponse of(Product product, Stock stock, User user) {
+    public static CheckoutResponse of(Product product, int remainingStock, User user) {
         return new CheckoutResponse(
                 product.getId(),
                 product.getName(),
@@ -42,7 +41,7 @@ public record CheckoutResponse(
                 product.getCheckInTime(),
                 product.getCheckOutTime(),
                 product.getDescription(),
-                stock.getRemainingQuantity(),
+                remainingStock,
                 user.getPointBalance()
         );
     }

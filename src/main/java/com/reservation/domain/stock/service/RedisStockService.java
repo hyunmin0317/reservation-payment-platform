@@ -47,6 +47,17 @@ public class RedisStockService {
         }
     }
 
+    public int getRemainingStock(Long productId) {
+        try {
+            String key = STOCK_KEY_PREFIX + productId;
+            String value = redisTemplate.opsForValue().get(key);
+            return value != null ? Integer.parseInt(value) : 0;
+        } catch (RedisConnectionFailureException e) {
+            log.warn("Redis 장애 감지, DB Fallback으로 재고 조회: {}", e.getMessage());
+            return stockService.getStockByProductId(productId).getRemainingQuantity();
+        }
+    }
+
     public void initStock(Long productId, int quantity) {
         String key = STOCK_KEY_PREFIX + productId;
         redisTemplate.opsForValue().set(key, String.valueOf(quantity));
