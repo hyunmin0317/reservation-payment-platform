@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,7 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<BookingResponse> book(
             @Parameter(description = "사용자 ID", required = true) @RequestHeader(HeaderConstants.USER_ID) Long userId,
-            @Parameter(description = "멱등성 키 (중복 요청 방지)", required = true) @RequestHeader(HeaderConstants.IDEMPOTENCY_KEY) String idempotencyKey,
+            @Parameter(description = "멱등성 키 (중복 요청 방지)", required = true) @RequestHeader(HeaderConstants.IDEMPOTENCY_KEY) @Size(max = 50) String idempotencyKey,
             @Valid @RequestBody BookingRequest request) {
         BookingResponse response = bookingService.book(userId, idempotencyKey, request);
         return ResponseEntity.ok(response);
