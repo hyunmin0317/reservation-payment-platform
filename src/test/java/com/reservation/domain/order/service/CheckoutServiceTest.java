@@ -1,6 +1,8 @@
 package com.reservation.domain.order.service;
 
 import com.reservation.domain.order.dto.CheckoutResponse;
+import com.reservation.domain.order.repository.OrderRepository;
+import com.reservation.domain.payment.repository.PaymentRepository;
 import com.reservation.domain.product.entity.Product;
 import com.reservation.domain.product.repository.ProductRepository;
 import com.reservation.domain.stock.entity.Stock;
@@ -36,6 +38,12 @@ class CheckoutServiceTest extends IntegrationTestSupport {
     private UserRepository userRepository;
 
     @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
     private RedisStockService redisStockService;
 
     private Product product;
@@ -43,6 +51,8 @@ class CheckoutServiceTest extends IntegrationTestSupport {
 
     @BeforeEach
     void setUp() {
+        paymentRepository.deleteAll();
+        orderRepository.deleteAll();
         stockRepository.deleteAll();
         productRepository.deleteAll();
         userRepository.deleteAll();
