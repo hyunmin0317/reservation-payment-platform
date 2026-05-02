@@ -85,6 +85,11 @@ docker compose up -d
 ```
 > 애플리케이션(Spring Boot) + MySQL + Redis가 모두 실행됩니다.
 
+### 종료 및 초기화
+```bash
+docker compose down -v
+```
+
 ### API 테스트
 
 Swagger UI에서 API를 직접 테스트할 수 있습니다.
@@ -99,9 +104,8 @@ http://localhost/swagger-ui/index.html
 
 > **인증/인가 참고사항**
 >
-> 본 프로젝트에서는 인증/인가 구현을 생략하였습니다.
-> 실제 환경에서는 `Authorization` 헤더의 토큰으로 사용자를 식별하지만,
-> 이를 대체하여 커스텀 헤더 `X-User-Id`로 사용자 ID를 직접 전달받는 방식을 사용합니다.
+> 본 프로젝트에서는 인증/인가 구현을 생략하였으며,
+> 커스텀 헤더 `X-User-Id`로 사용자 ID를 직접 전달받는 방식을 사용합니다.
 
 ### 1. GET /api/checkout/products/{productId} - 주문서 진입
 
