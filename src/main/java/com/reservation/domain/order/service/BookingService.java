@@ -15,6 +15,7 @@ import com.reservation.domain.user.service.UserService;
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -48,6 +49,11 @@ public class BookingService {
         try {
             OrderResult result = orderTransactionService.process(user, product, idempotencyKey, request, redisUsed);
             return BookingResponse.of(result.order(), result.payments());
+        } catch (DataIntegrityViolationException e) {
+            if (redisUsed) {
+                redisStockService.increase(product.getId());
+            }
+            throw new GeneralException(ErrorCode.DUPLICATE_ORDER);
         } catch (Exception e) {
             if (redisUsed) {
                 redisStockService.increase(product.getId());
