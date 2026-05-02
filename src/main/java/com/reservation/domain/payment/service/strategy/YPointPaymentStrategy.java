@@ -25,7 +25,7 @@ public class YPointPaymentStrategy implements PaymentStrategy {
 
     @Override
     public void pay(Payment payment, Order order) {
-        User user = userRepository.findById(order.getUser().getId())
+        User user = userRepository.findWithLockById(order.getUser().getId())
                 .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
 
         if (user.getPointBalance() < payment.getAmount()) {
