@@ -1,6 +1,8 @@
 package com.reservation.domain.user.entity;
 
 import com.reservation.global.common.entity.BaseEntity;
+import com.reservation.global.exception.GeneralException;
+import com.reservation.global.exception.code.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -35,7 +37,7 @@ public class User extends BaseEntity {
 
     public void deductPoints(int amount) {
         if (this.pointBalance < amount) {
-            throw new IllegalStateException("포인트가 부족합니다.");
+            throw new GeneralException(ErrorCode.INSUFFICIENT_POINTS);
         }
         this.pointBalance -= amount;
     }
