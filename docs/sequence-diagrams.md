@@ -220,7 +220,7 @@ sequenceDiagram
     C->>S: 결제 요청
     S->>CB: PG 호출 시도
     CB-->>S: 서킷 오픈 (즉시 실패)
-    S-->>C: 503 {"code": "PAYMENT005",<br/>"message": "결제 서비스가 일시적으로 불가합니다."}
+    S-->>C: 503 {"code": "PAYMENT006",<br/>"message": "결제 서비스를 일시적으로 이용할 수 없습니다."}
 
     Note over CB: 대기 시간 경과 → HALF_OPEN
 

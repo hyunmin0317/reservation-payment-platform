@@ -449,7 +449,31 @@ self-invocation 시 Spring AOP 프록시가 동작하지 않는 문제를 방지
 
 ---
 
-## 쟁점 10. 동일 사용자 중복 구매 제한 미적용
+## 쟁점 10. 포인트 차감 동시성 제어
+
+> 동일 사용자가 동시에 여러 주문을 생성하면 포인트 잔액 검증과 차감 사이에 Race Condition이 발생할 수 있는 문제
+
+### 상황
+
+`YPointPaymentStrategy`에서 포인트 잔액 확인(`getPointBalance()`) 후 차감(`deductPoints()`)하는 사이에 다른 트랜잭션이 동일 사용자의 포인트를 차감하면, 잔액이 음수가 될 수 있습니다.
+
+### 선택지
+
+| 방식 | 핵심 원리 |
+|------|---------|
+| 낙관적 락 (@Version) | 충돌 시 재시도, 포인트 차감은 단순 연산이므로 재시도 비용 낮음 |
+| 비관적 락 (SELECT FOR UPDATE) | 사용자 row에 쓰기 락, 순차 처리 보장 |
+| UPDATE WHERE 조건부 | `UPDATE users SET point_balance = point_balance - ? WHERE point_balance >= ?` |
+
+### 최종 선택: 비관적 락
+
+- 재고 관리의 DB Fallback에서도 비관적 락(`findWithLockByProductId`)을 사용하므로, 동일 패턴으로 일관성 유지
+- 포인트 차감은 결제 트랜잭션 내에서 실행되므로 락 점유 시간이 짧음
+- `UserRepository.findWithLockById()`로 사용자를 조회하여 잔액 검증과 차감이 원자적으로 처리됨
+
+---
+
+## 쟁점 11. 동일 사용자 중복 구매 제한 미적용
 
 현재 구조에서는 같은 사용자가 다른 멱등성 키로 동일 상품을 여러 번 예약할 수 있습니다. 이는 의도적인 판단입니다.
 
