@@ -14,7 +14,7 @@
 | Database | MySQL 8.0 |
 | Cache | Redis 7 |
 | Build | Gradle |
-| Infra | Docker Compose (MySQL, Redis) |
+| Infra | Docker Compose (Nginx, MySQL, Redis) |
 | Library | Spring Data JPA, Spring Data Redis, Resilience4j |
 
 ---
@@ -197,14 +197,14 @@ Content-Type: application/json
      └───────┬───────┘
              │
      ┌───────▼───────┐
-     │  Load Balancer │
+     │  Nginx (:80)  │
      └───────┬───────┘
              │
      ┌───────┴───────┐
      │               │
 ┌────▼────┐    ┌────▼────┐
-│ Server 1│    │ Server 2│
-│ (:8080) │    │ (:8081) │
+│Server 1 │    │Server 2 │
+│ (:8080) │    │ (:8080) │
 └────┬────┘    └────┬────┘
      │               │
      └───────┬───────┘
