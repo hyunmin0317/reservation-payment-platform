@@ -25,8 +25,6 @@
 src/main/java/com/reservation/
 ├── domain/
 │   ├── product/             # 상품 도메인
-│   │   ├── controller/
-│   │   ├── dto/
 │   │   ├── entity/
 │   │   ├── repository/
 │   │   └── service/
@@ -75,6 +73,14 @@ src/main/java/com/reservation/
 docker compose up -d
 ```
 > 애플리케이션(Spring Boot) + MySQL + Redis가 모두 실행됩니다.
+
+### API 테스트
+
+Swagger UI에서 API를 직접 테스트할 수 있습니다.
+
+```
+http://localhost/swagger-ui/index.html
+```
 
 ---
 
