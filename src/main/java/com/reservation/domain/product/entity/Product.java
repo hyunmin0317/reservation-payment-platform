@@ -32,13 +32,25 @@ public class Product extends BaseEntity {
     @Column(length = 500)
     private String description;
 
+    @Column(nullable = false)
+    private LocalTime saleStartTime;
+
     public static Product create(String name, int price, LocalTime checkInTime, LocalTime checkOutTime, String description) {
+        return create(name, price, checkInTime, checkOutTime, description, LocalTime.MIDNIGHT);
+    }
+
+    public static Product create(String name, int price, LocalTime checkInTime, LocalTime checkOutTime, String description, LocalTime saleStartTime) {
         Product product = new Product();
         product.name = name;
         product.price = price;
         product.checkInTime = checkInTime;
         product.checkOutTime = checkOutTime;
         product.description = description;
+        product.saleStartTime = saleStartTime;
         return product;
+    }
+
+    public boolean isSaleOpen() {
+        return !LocalTime.now().isBefore(saleStartTime);
     }
 }
