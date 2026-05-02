@@ -222,6 +222,7 @@ public interface PaymentStrategy {
 - DB Fallback 시 성능 저하는 불가피하나, 재고 10개가 빠르게 소진되므로 실제 락 경합 시간은 짧음
 - 매 요청마다 Redis를 먼저 시도하므로 Redis 복구 시 자동으로 정상 모드 복귀
 - Redis decrease 성공 후 결제 실패 시 increase로 재고를 복구하는데, 이 시점에 Redis 장애가 발생하면 Redis 재고가 DB보다 1 적게 남을 수 있음. DB 트랜잭션은 롤백되므로 DB 재고는 정상이며, 서버 재시작 시 `StockInitializer`가 DB 기준으로 Redis를 재동기화하여 해소됨
+- DB Fallback으로 재고를 차감한 후 결제가 실패하면, Fallback의 `decreaseWithPessimisticLock()`이 별도 트랜잭션에서 이미 커밋되어 DB 재고가 1 적게 남을 수 있음. 이는 Redis 장애 + 결제 실패가 동시에 발생하는 극히 드문 케이스이며, 재고가 1 적게 남는 것(미달 판매)은 초과판매보다 안전한 방향임
 
 ---
 
