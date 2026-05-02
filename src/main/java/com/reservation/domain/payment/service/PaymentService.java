@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -74,7 +73,7 @@ public class PaymentService {
     private List<PaymentRequest> sortInternalFirst(List<PaymentRequest> requests) {
         return requests.stream()
                 .sorted(Comparator.comparing(r -> r.method().getType() == PaymentMethodType.INTERNAL ? 0 : 1))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private void rollback(List<Payment> completedPayments, Order order) {
