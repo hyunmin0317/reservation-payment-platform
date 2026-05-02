@@ -16,6 +16,7 @@ public record PaymentResponse(
         @Schema(description = "결제 상태", example = "SUCCESS")
         PaymentStatus status
 ) {
+
     public static PaymentResponse from(Payment payment) {
         return new PaymentResponse(
                 payment.getMethod(),
