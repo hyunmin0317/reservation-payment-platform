@@ -10,6 +10,12 @@ spring:
         format_sql: true
     open-in-view: false
 
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 5
+      connection-timeout: 3000
+
   jackson:
     property-naming-strategy: LOWER_CAMEL_CASE
 
