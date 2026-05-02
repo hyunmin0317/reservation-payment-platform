@@ -1,20 +1,4 @@
 services:
-  server:
-    container_name: reservation-server
-    build: .
-    image: ghcr.io/hyunmin0317/reservation-payment-platform:latest
-    environment:
-      TZ: Asia/Seoul
-      SPRING_PROFILES_ACTIVE: docker
-    ports:
-      - "8080:8080"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: always
-
   mysql:
     image: mysql:8.0
     container_name: reservation-mysql
