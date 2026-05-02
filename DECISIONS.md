@@ -141,7 +141,7 @@ public interface PaymentStrategy {
 | Redis 기반 멱등성 키 | Redis에 키 저장 (TTL 24h), O(1) 조회 |
 | 서버 메모리 캐시 | 서버 내 Map에 키 저장 |
 
-### 최종 선택: Redis 기반 멱등성 키 + DB UNIQUE Fallback
+### 최종 선택: Redis SETNX 기반 원자적 선점 + DB UNIQUE Fallback
 
 **선택 근거**
 
@@ -150,17 +150,23 @@ public interface PaymentStrategy {
 - 분산 환경(서버 2대)에서 동일한 Redis를 바라보므로, 어느 서버로 요청이 들어와도 중복 체크 가능
 - 서버 메모리 캐시는 분산 환경에서 서버 간 공유 불가 → 제외
 
+**SETNX 도입 배경**
+
+초기에는 `exists()`(확인)와 `save()`(저장)를 분리하여 구현하였으나, 동일한 멱등성 키로 동시에 2개 요청이 들어오면 둘 다 `exists() == false`를 통과하여 재고가 2개 차감되는 문제가 있었습니다. DB UNIQUE 제약조건이 최종 방어선이 되지만, 불필요한 재고 차감/복구가 발생합니다.
+
+이를 해결하기 위해 `IdempotencyService.tryAcquire()`에서 Redis `SETNX`(SET if Not eXists)를 사용하여 확인과 선점을 원자적으로 처리합니다.
+
 **Redis 장애 시 Fallback**
 
-- `IdempotencyService.exists()`: Redis 장애 시 DB에서 `idempotency_key`로 기존 주문 존재 여부 확인
-- `IdempotencyService.save()`: Redis 장애 시 저장 생략 — DB UNIQUE 제약조건이 중복 삽입 방지
+- `IdempotencyService.tryAcquire()`: Redis 장애 시 DB에서 `idempotency_key`로 기존 주문 존재 여부 확인
 - 클라이언트가 `Idempotency-Key` 헤더로 UUID를 전송하는 표준 방식 채택
 
 **처리 흐름**
 
-1. Redis에서 멱등성 키 존재 확인
-2. 존재 → DB에서 기존 주문 조회 후 반환
-3. 미존재 → 예약 플로우 진행 → 성공 시 Redis에 키 저장 (TTL 24h)
+1. Redis SETNX로 멱등성 키 선점 시도 (TTL 24h)
+2. 선점 실패(이미 존재) → DB에서 기존 주문 조회 후 반환
+3. 선점 성공 → 예약 플로우 진행
+4. 예약 실패 시 → `release()`로 키 삭제 (재시도 허용)
 
 **트레이드오프**
 
@@ -195,8 +201,9 @@ public interface PaymentStrategy {
 | 기능 | 정상 시 | Redis 장애 시 |
 |------|---------|-------------|
 | 재고 관리 | Redis Lua Script | DB 비관적 락 |
-| 멱등성 체크 | Redis GET | DB UNIQUE 제약조건 |
-| 멱등성 저장 | Redis SET (TTL 24h) | 생략 (DB UNIQUE로 보장) |
+| 재고 조회 (Checkout) | Redis GET | DB 조회 |
+| 멱등성 선점 | Redis SETNX (TTL 24h) | DB UNIQUE 제약조건 |
+| Rate Limiting | Redis Lua Script | 비활성화 |
 
 **구현 방식**
 
@@ -226,11 +233,12 @@ Redis Lua 스크립트에서 재고가 0이면 즉시 `return 0` → DB까지 �
 
 **2. Rate Limiting**
 
-Redis INCR + EXPIRE로 사용자별 초당 5회 요청 제한합니다.
+Lua 스크립트로 INCR + EXPIRE를 원자적으로 처리하여 사용자별 초당 5회 요청을 제한합니다.
 
 - 악의적 반복 요청이나 봇을 차단하여 정상 사용자의 기회 보호
 - `/api/bookings` 경로에만 적용 (조회 API는 제한 불필요)
 - Redis 장애 시 비활성화 — DB 비관적 락이 자연스러운 속도 제한 역할
+- Lua 스크립트로 INCR과 EXPIRE를 하나의 원자적 연산으로 처리하여 Race Condition 방지
 
 **3. 서킷브레이커 (Resilience4j)**
 
@@ -296,7 +304,7 @@ Redis가 대부분의 트래픽을 흡수하므로 DB에 도달하는 요청은 
 ### 예약 플로우
 
 ```
-Redis 재고 차감 → [DB 트랜잭션: 주문 생성 → 결제 → DB 재고 차감 → 주문 확정] → Redis 멱등성 키 저장
+멱등성 키 선점(SETNX) → 오픈 시간 검증 → Redis 재고 차감 → [DB 트랜잭션: 주문 생성 → 결제 금액 검증 → 결제 → DB 재고 차감 → 주문 확정]
 ```
 
 ### 트랜잭션 경계 설계
@@ -305,9 +313,10 @@ Redis 재고 차감 → [DB 트랜잭션: 주문 생성 → 결제 → DB 재고
 
 | 구간 | 트랜잭션 범위 | 이유 |
 |------|-------------|------|
+| 멱등성 키 선점 (SETNX) | 트랜잭션 외부 | Redis 원자적 연산으로 처리 |
+| 오픈 시간 검증 | 트랜잭션 외부 | 재고 차감 전 빠른 차단 |
 | Redis 재고 차감 | 트랜잭션 외부 | Redis는 DB 트랜잭션에 참여할 수 없음 |
-| 주문 생성 → 결제 → DB 재고 차감 → 주문 확정 | @Transactional | DB 작업은 원자적으로 처리 |
-| Redis 멱등성 키 저장 | 트랜잭션 외부 | 주문 확정 후에만 저장 |
+| 주문 생성 → 결제 금액 검증 → 결제 → DB 재고 차감 → 주문 확정 | @Transactional | DB 작업은 원자적으로 처리 |
 
 self-invocation 시 Spring AOP 프록시가 동작하지 않는 문제를 방지하기 위해 `OrderTransactionService`를 별도 클래스로 분리하였습니다.
 
@@ -315,11 +324,13 @@ self-invocation 시 Spring AOP 프록시가 동작하지 않는 문제를 방지
 
 | 실패 지점 | 보상 동작 |
 |----------|---------|
-| 결제 중 포인트 부족 | Redis 재고 복구 (INCR) |
-| 결제 중 외부 결제 실패 | 포인트 환불 + Redis 재고 복구 |
-| DB 저장 실패 | 결제 취소 + 포인트 환불 + Redis 재고 복구 (DB는 트랜잭션 롤백) |
+| 오픈 시간 검증 실패 | 멱등성 키 해제 (release) |
+| 결제 금액 불일치 | 멱등성 키 해제 + Redis 재고 복구 (INCR) |
+| 결제 중 포인트 부족 | 멱등성 키 해제 + Redis 재고 복구 (INCR) |
+| 결제 중 외부 결제 실패 | 포인트 환불 + 멱등성 키 해제 + Redis 재고 복구 |
+| DB 저장 실패 | 결제 취소 + 포인트 환불 + 멱등성 키 해제 + Redis 재고 복구 (DB는 트랜잭션 롤백) |
 
-결제 내부의 보상(포인트 환불, 외부 결제 취소)은 `PaymentService.rollback()`이 Strategy별 `cancel()`로 처리하고, Redis 재고 복구와 주문 상태 변경은 `BookingService`에서 처리합니다.
+결제 내부의 보상(포인트 환불, 외부 결제 취소)은 `PaymentService.rollback()`이 Strategy별 `cancel()`로 처리하고, Redis 재고 복구와 멱등성 키 해제는 `BookingService`에서 처리합니다.
 
 ### 선택 근거
 
