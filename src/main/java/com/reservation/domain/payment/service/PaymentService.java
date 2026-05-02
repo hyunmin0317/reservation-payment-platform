@@ -9,6 +9,7 @@ import com.reservation.domain.payment.repository.PaymentRepository;
 import com.reservation.domain.payment.service.strategy.PaymentStrategy;
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class PaymentService {
 
@@ -86,10 +88,15 @@ public class PaymentService {
 
     private void rollback(List<Payment> completedPayments, Order order) {
         for (Payment completed : completedPayments) {
-            PaymentStrategy strategy = strategyMap.get(completed.getMethod());
-            strategy.cancel(completed, order);
-            completed.cancel();
-            paymentRepository.save(completed);
+            try {
+                PaymentStrategy strategy = strategyMap.get(completed.getMethod());
+                strategy.cancel(completed, order);
+                completed.cancel();
+                paymentRepository.save(completed);
+            } catch (Exception e) {
+                log.error("결제 취소 실패 (paymentId: {}, method: {}): {}",
+                        completed.getId(), completed.getMethod(), e.getMessage());
+            }
         }
     }
 }
