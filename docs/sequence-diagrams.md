@@ -11,16 +11,12 @@ sequenceDiagram
 
     C->>S: GET /api/checkout/products/{productId}<br/>X-User-Id: {userId}
 
-    par 병렬 조회
-        S->>R: 잔여 재고 조회 (GET stock:{productId})
-        R-->>S: remainingStock
-    and
-        S->>DB: 상품 정보 조회 (Product)
-        DB-->>S: product
-    and
-        S->>DB: 사용자 포인트 조회 (User)
-        DB-->>S: pointBalance
-    end
+    S->>DB: 상품 정보 조회 (Product)
+    DB-->>S: product
+    S->>R: 잔여 재고 조회 (GET stock:{productId})
+    R-->>S: remainingStock
+    S->>DB: 사용자 포인트 조회 (User)
+    DB-->>S: pointBalance
 
     alt 상품 없음
         S-->>C: 404 {"code": "PRODUCT001", "message": "상품을 찾을 수 없습니다."}

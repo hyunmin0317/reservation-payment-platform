@@ -324,8 +324,8 @@ sequenceDiagram
     participant DB as MySQL
 
     C->>S: GET /api/checkout/1 (X-User-Id: 1)
-    S->>R: 잔여 재고 조회
     S->>DB: 상품 정보 조회
+    S->>R: 잔여 재고 조회
     S->>DB: 사용자 포인트 조회
     S-->>C: 상품 정보 + 잔여 재고 + 포인트 응답
 ```
