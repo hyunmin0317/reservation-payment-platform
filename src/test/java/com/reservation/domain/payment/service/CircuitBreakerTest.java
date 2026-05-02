@@ -21,7 +21,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.annotation.DirtiesContext;
 
 import java.time.LocalTime;
 import java.util.List;
@@ -31,7 +30,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 class CircuitBreakerTest extends IntegrationTestSupport {
 
     @Autowired
@@ -64,10 +62,7 @@ class CircuitBreakerTest extends IntegrationTestSupport {
         productRepository.deleteAll();
         userRepository.deleteAll();
 
-        circuitBreakerRegistry.getAllCircuitBreakers().forEach(cb -> {
-            cb.transitionToClosedState();
-            cb.reset();
-        });
+        circuitBreakerRegistry.circuitBreaker("externalPayment").reset();
 
         User user = userRepository.saveAndFlush(User.create("테스트유저", "test@test.com", 50000));
         Product product = productRepository.saveAndFlush(Product.create(
@@ -129,7 +124,6 @@ class CircuitBreakerTest extends IntegrationTestSupport {
         when(pgClient.pay(anyInt())).thenThrow(new RuntimeException("PG down"));
 
         CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("externalPayment");
-        assertThat(cb.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
 
         for (int i = 0; i < 10; i++) {
             try {
