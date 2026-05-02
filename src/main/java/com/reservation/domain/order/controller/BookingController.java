@@ -29,7 +29,7 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<BookingResponse> book(
             @Parameter(description = "사용자 ID", required = true) @RequestHeader(HeaderConstants.USER_ID) Long userId,
-            @Parameter(description = "멱등성 키 (중복 요청 방지)", required = true) @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Parameter(description = "멱등성 키 (중복 요청 방지)", required = true) @RequestHeader(HeaderConstants.IDEMPOTENCY_KEY) String idempotencyKey,
             @Valid @RequestBody BookingRequest request) {
         BookingResponse response = bookingService.book(userId, idempotencyKey, request);
         return ResponseEntity.ok(response);
