@@ -20,20 +20,22 @@ public class IdempotencyService {
     private final StringRedisTemplate redisTemplate;
     private final OrderRepository orderRepository;
 
-    public boolean exists(String idempotencyKey) {
+    public boolean tryAcquire(String idempotencyKey) {
         try {
-            return Boolean.TRUE.equals(redisTemplate.hasKey(KEY_PREFIX + idempotencyKey));
+            Boolean result = redisTemplate.opsForValue()
+                    .setIfAbsent(KEY_PREFIX + idempotencyKey, "1", TTL);
+            return Boolean.TRUE.equals(result);
         } catch (RedisConnectionFailureException e) {
             log.warn("Redis 장애 감지, DB Fallback으로 멱등성 체크: {}", e.getMessage());
-            return orderRepository.findByIdempotencyKey(idempotencyKey).isPresent();
+            return orderRepository.findByIdempotencyKey(idempotencyKey).isEmpty();
         }
     }
 
-    public void save(String idempotencyKey) {
+    public void release(String idempotencyKey) {
         try {
-            redisTemplate.opsForValue().set(KEY_PREFIX + idempotencyKey, "1", TTL);
+            redisTemplate.delete(KEY_PREFIX + idempotencyKey);
         } catch (RedisConnectionFailureException e) {
-            log.warn("Redis 장애로 멱등성 키 저장 생략 (DB UNIQUE 제약조건으로 보장): {}", e.getMessage());
+            log.warn("Redis 장애로 멱등성 키 삭제 생략: {}", e.getMessage());
         }
     }
 }
