@@ -19,6 +19,7 @@ public enum ErrorCode {
 
     // Product
     PRODUCT_NOT_FOUND(404, "PRODUCT001", "상품을 찾을 수 없습니다."),
+    SALE_NOT_STARTED(403, "PRODUCT002", "아직 판매가 시작되지 않았습니다."),
 
     // Stock
     STOCK_NOT_FOUND(404, "STOCK001", "재고 정보를 찾을 수 없습니다."),

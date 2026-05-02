@@ -37,6 +37,10 @@ public class BookingService {
         }
 
         Product product = productService.getProduct(request.productId());
+        if (!product.isSaleOpen()) {
+            idempotencyService.release(idempotencyKey);
+            throw new GeneralException(ErrorCode.SALE_NOT_STARTED);
+        }
         User user = userService.getUser(userId);
 
         boolean redisUsed = redisStockService.decrease(product.getId());
