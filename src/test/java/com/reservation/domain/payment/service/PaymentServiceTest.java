@@ -70,6 +70,21 @@ class PaymentServiceTest extends IntegrationTestSupport {
                 .build());
     }
 
+    private Order createOrderWithAmount(int amount) {
+        Product product = productRepository.saveAndFlush(Product.create(
+                "테스트 숙소", amount,
+                LocalTime.of(15, 0), LocalTime.of(11, 0),
+                "결제 테스트용 상품"
+        ));
+        return orderRepository.saveAndFlush(Order.builder()
+                .orderNumber("ORD-TEST-" + System.nanoTime())
+                .user(user)
+                .product(product)
+                .totalAmount(amount)
+                .idempotencyKey("test-key-" + System.nanoTime())
+                .build());
+    }
+
     @Nested
     @DisplayName("단일 결제")
     class SinglePayment {
@@ -78,7 +93,7 @@ class PaymentServiceTest extends IntegrationTestSupport {
         @Test
         void creditCardPaymentSucceeds() {
             List<Payment> payments = paymentService.pay(order,
-                    List.of(new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)));
+                    List.of(new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)), 100000);
 
             assertThat(payments).hasSize(1);
             assertThat(payments.get(0).getStatus()).isEqualTo(PaymentStatus.APPROVED);
@@ -89,7 +104,7 @@ class PaymentServiceTest extends IntegrationTestSupport {
         @Test
         void yPayPaymentSucceeds() {
             List<Payment> payments = paymentService.pay(order,
-                    List.of(new PaymentRequest(PaymentMethod.Y_PAY, 100000)));
+                    List.of(new PaymentRequest(PaymentMethod.Y_PAY, 100000)), 100000);
 
             assertThat(payments).hasSize(1);
             assertThat(payments.get(0).getStatus()).isEqualTo(PaymentStatus.APPROVED);
@@ -98,20 +113,22 @@ class PaymentServiceTest extends IntegrationTestSupport {
         @DisplayName("Y포인트 결제 성공 시 잔액 차감")
         @Test
         void yPointPaymentSucceeds() {
-            List<Payment> payments = paymentService.pay(order,
-                    List.of(new PaymentRequest(PaymentMethod.Y_POINT, 30000)));
+            Order pointOrder = createOrderWithAmount(50000);
+
+            List<Payment> payments = paymentService.pay(pointOrder,
+                    List.of(new PaymentRequest(PaymentMethod.Y_POINT, 50000)), 50000);
 
             assertThat(payments).hasSize(1);
             assertThat(payments.get(0).getStatus()).isEqualTo(PaymentStatus.APPROVED);
             User updatedUser = userRepository.findById(user.getId()).orElseThrow();
-            assertThat(updatedUser.getPointBalance()).isEqualTo(20000);
+            assertThat(updatedUser.getPointBalance()).isEqualTo(0);
         }
 
         @DisplayName("Y포인트 잔액 부족 시 결제 실패")
         @Test
         void yPointPaymentFailsWhenInsufficientBalance() {
             assertThatThrownBy(() -> paymentService.pay(order,
-                    List.of(new PaymentRequest(PaymentMethod.Y_POINT, 60000))))
+                    List.of(new PaymentRequest(PaymentMethod.Y_POINT, 100000)), 100000))
                     .isInstanceOf(GeneralException.class)
                     .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
                             .isEqualTo(ErrorCode.INSUFFICIENT_POINTS));
@@ -128,7 +145,7 @@ class PaymentServiceTest extends IntegrationTestSupport {
             List<Payment> payments = paymentService.pay(order, List.of(
                     new PaymentRequest(PaymentMethod.Y_POINT, 30000),
                     new PaymentRequest(PaymentMethod.CREDIT_CARD, 70000)
-            ));
+            ), 100000);
 
             assertThat(payments).hasSize(2);
             assertThat(payments).allMatch(p -> p.getStatus() == PaymentStatus.APPROVED);
@@ -142,12 +159,28 @@ class PaymentServiceTest extends IntegrationTestSupport {
             List<Payment> payments = paymentService.pay(order, List.of(
                     new PaymentRequest(PaymentMethod.Y_POINT, 20000),
                     new PaymentRequest(PaymentMethod.Y_PAY, 80000)
-            ));
+            ), 100000);
 
             assertThat(payments).hasSize(2);
             assertThat(payments).allMatch(p -> p.getStatus() == PaymentStatus.APPROVED);
             User updatedUser = userRepository.findById(user.getId()).orElseThrow();
             assertThat(updatedUser.getPointBalance()).isEqualTo(30000);
+        }
+    }
+
+    @Nested
+    @DisplayName("결제 금액 검증")
+    class PaymentAmountValidation {
+
+        @DisplayName("결제 금액 합계가 상품 가격과 다르면 실패")
+        @Test
+        void failsWhenTotalAmountMismatch() {
+            assertThatThrownBy(() -> paymentService.pay(order, List.of(
+                    new PaymentRequest(PaymentMethod.CREDIT_CARD, 50000)
+            ), 100000))
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
+                            .isEqualTo(ErrorCode.INVALID_PAYMENT_AMOUNT));
         }
     }
 
@@ -161,7 +194,7 @@ class PaymentServiceTest extends IntegrationTestSupport {
             assertThatThrownBy(() -> paymentService.pay(order, List.of(
                     new PaymentRequest(PaymentMethod.CREDIT_CARD, 50000),
                     new PaymentRequest(PaymentMethod.Y_PAY, 50000)
-            )))
+            ), 100000))
                     .isInstanceOf(GeneralException.class)
                     .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
                             .isEqualTo(ErrorCode.INVALID_PAYMENT_COMBINATION));
@@ -175,7 +208,7 @@ class PaymentServiceTest extends IntegrationTestSupport {
             List<Payment> payments = paymentService.pay(order, List.of(
                     new PaymentRequest(PaymentMethod.Y_POINT, 10000),
                     new PaymentRequest(PaymentMethod.CREDIT_CARD, 90000)
-            ));
+            ), 100000);
 
             assertThat(payments).hasSize(2);
             User updatedUser = userRepository.findById(user.getId()).orElseThrow();

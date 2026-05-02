@@ -86,7 +86,7 @@ class CircuitBreakerTest extends IntegrationTestSupport {
 
         assertThatThrownBy(() -> paymentService.pay(order, List.of(
                 new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
-        )))
+        ), 100000))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.PAYMENT_FAILED));
@@ -99,7 +99,7 @@ class CircuitBreakerTest extends IntegrationTestSupport {
 
         assertThatThrownBy(() -> paymentService.pay(order, List.of(
                 new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
-        )))
+        ), 100000))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.PAYMENT_LIMIT_EXCEEDED));
@@ -112,7 +112,7 @@ class CircuitBreakerTest extends IntegrationTestSupport {
 
         assertThatThrownBy(() -> paymentService.pay(order, List.of(
                 new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
-        )))
+        ), 100000))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.PAYMENT_TIMEOUT));
@@ -129,7 +129,7 @@ class CircuitBreakerTest extends IntegrationTestSupport {
             try {
                 paymentService.pay(order, List.of(
                         new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
-                ));
+                ), 100000);
             } catch (GeneralException ignored) {
             }
         }
@@ -138,7 +138,7 @@ class CircuitBreakerTest extends IntegrationTestSupport {
 
         assertThatThrownBy(() -> paymentService.pay(order, List.of(
                 new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
-        )))
+        ), 100000))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.PAYMENT_SERVICE_UNAVAILABLE));

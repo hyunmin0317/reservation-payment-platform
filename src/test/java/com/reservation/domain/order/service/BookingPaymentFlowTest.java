@@ -140,7 +140,7 @@ class BookingPaymentFlowTest extends IntegrationTestSupport {
         @DisplayName("포인트 부족 시 예약 실패")
         @Test
         void insufficientPointsFails() {
-            assertThatThrownBy(() -> book(PaymentMethod.Y_POINT, 60000))
+            assertThatThrownBy(() -> book(PaymentMethod.Y_POINT, 100000))
                     .isInstanceOf(GeneralException.class)
                     .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
                             .isEqualTo(ErrorCode.INSUFFICIENT_POINTS));
