@@ -93,6 +93,15 @@ Swagger UI에서 API를 직접 테스트할 수 있습니다.
 http://localhost/swagger-ui/index.html
 ```
 
+### 초기 데이터
+
+| 데이터 | ID 범위 | 비고 |
+|--------|---------|------|
+| 상품 | 1 ~ 5 | 각 상품당 재고 10개 |
+| 사용자 | 1 ~ 5 | 포인트: 0 ~ 300,000 |
+
+> 상세 초기 데이터는 [infra/mysql/init.sql](infra/mysql/init.sql)을 참고하세요.
+
 ---
 
 ## API 명세
