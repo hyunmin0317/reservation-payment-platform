@@ -4,7 +4,7 @@
 
 | 도구 | 모델 |
 |------|------|
-| [Claude Code](https://claude.com/claude-code) (CLI) | Claude Opus 4.6 |
+| Claude Code (CLI) | Claude Opus 4.6 |
 
 ## 활용 범위
 
