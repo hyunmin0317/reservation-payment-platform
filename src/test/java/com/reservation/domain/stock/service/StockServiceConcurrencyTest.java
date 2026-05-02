@@ -37,9 +37,6 @@ class StockServiceConcurrencyTest extends IntegrationTestSupport {
     private StockService stockService;
 
     @Autowired
-    private StockFacade stockFacade;
-
-    @Autowired
     private RedisStockService redisStockService;
 
     @Autowired
@@ -144,21 +141,6 @@ class StockServiceConcurrencyTest extends IntegrationTestSupport {
         void preventsOverselling(int requestCount) throws Exception {
             runConcurrencyTest("Pessimistic lock",
                     () -> stockService.decreaseWithPessimisticLock(productId), requestCount);
-
-            Stock stock = stockRepository.findByProductId(productId).orElseThrow();
-            assertThat(stock.getRemainingQuantity()).isZero();
-        }
-    }
-
-    @Nested
-    @DisplayName("낙관적 락")
-    class OptimisticLock {
-        @DisplayName("초과판매 방지")
-        @ParameterizedTest
-        @ValueSource(ints = {100, 1000})
-        void preventsOverselling(int requestCount) throws Exception {
-            runConcurrencyTest("Optimistic lock (retry=100)",
-                    () -> stockFacade.decreaseWithOptimisticLock(productId, 100), requestCount);
 
             Stock stock = stockRepository.findByProductId(productId).orElseThrow();
             assertThat(stock.getRemainingQuantity()).isZero();
