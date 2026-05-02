@@ -29,6 +29,9 @@ public record CheckoutResponse(
         @Schema(description = "잔여 재고 수량", example = "5")
         int remainingStock,
 
+        @Schema(description = "판매 시작 시간", example = "00:00:00")
+        LocalTime saleStartTime,
+
         @Schema(description = "사용자 보유 포인트", example = "50000")
         int userPoint
 ) {
@@ -42,6 +45,7 @@ public record CheckoutResponse(
                 product.getCheckOutTime(),
                 product.getDescription(),
                 remainingStock,
+                product.getSaleStartTime(),
                 user.getPointBalance()
         );
     }
