@@ -297,7 +297,7 @@ Redis가 대부분의 트래픽을 흡수하므로 DB에 도달하는 요청은 
 | 한도 초과 | 사용자 결제 한도 초과 | PAYMENT_LIMIT_EXCEEDED | 400 |
 | 타임아웃 | PG/Y페이 응답 지연 | PAYMENT_TIMEOUT | 503 |
 | 네트워크 오류 | 연결 실패, 예외 발생 | PAYMENT_TIMEOUT | 503 |
-| 서킷 오픈 | 장애 누적으로 서킷브레이커 차단 | PAYMENT_TIMEOUT | 503 |
+| 서킷 오픈 | 장애 누적으로 서킷브레이커 차단 | PAYMENT_SERVICE_UNAVAILABLE | 503 |
 | 기타 실패 | 그 외 거절 사유 | PAYMENT_FAILED | 500 |
 
 ### 서킷브레이커 (Resilience4j)
