@@ -347,6 +347,15 @@ Redis가 대부분의 트래픽을 흡수하므로 DB에 도달하는 요청은 
 
 self-invocation 시 Spring AOP 프록시가 동작하지 않는 문제를 방지하기 위해 `OrderTransactionService`를 별도 클래스로 분리하였습니다.
 
+**DB 재고 이중 차감 방지 (`decreaseDbStock` 플래그)**
+
+`OrderTransactionService.process()`는 `decreaseDbStock` 파라미터로 DB 재고 차감 여부를 분기합니다.
+
+- Redis 정상 시: Redis에서 재고 차감 성공 → `decreaseDbStock = true` → 트랜잭션 내에서 DB 재고도 동기화
+- Redis 장애 시: `StockService.decreaseWithPessimisticLock()`으로 DB에서 이미 차감 → `decreaseDbStock = false` → 트랜잭션 내 DB 차감 생략
+
+이 플래그로 Redis Fallback 시 DB 재고가 이중으로 차감되는 것을 방지합니다.
+
 ### 실패 시나리오별 보상 전략
 
 | 실패 지점 | 보상 동작 |
@@ -433,3 +442,13 @@ self-invocation 시 Spring AOP 프록시가 동작하지 않는 문제를 방지
 - Redis Lua 스크립트 기반 재고 차감, 멱등성 키 저장, Rate Limiting에 활용
 - `StringRedisTemplate`, `RedisScript` 등 Spring 추상화를 통해 Redis 연동을 간결하게 처리
 - Lettuce 기반 비동기 커넥션으로 성능 확보
+
+---
+
+## 쟁점 10. 동일 사용자 중복 구매 제한 미적용
+
+현재 구조에서는 같은 사용자가 다른 멱등성 키로 동일 상품을 여러 번 예약할 수 있습니다. 이는 의도적인 판단입니다.
+
+- 요구사항에 1인 1건 제한이 명시되지 않았으며, 실무에서는 비즈니스 정책에 따라 결정되는 사항
+- 숙소 예약 특성상 동일 상품을 여러 건 구매하는 시나리오(가족/단체 예약 등)가 존재할 수 있음
+- 필요 시 `orders` 테이블에 `(user_id, product_id)` UNIQUE 제약조건을 추가하여 간단히 구현 가능
