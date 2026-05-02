@@ -45,32 +45,29 @@ sequenceDiagram
 
     C->>S: POST /api/bookings<br/>X-User-Id: {userId}<br/>Idempotency-Key: {UUID}
 
-    %% Step 1: 멱등성 체크
-    S->>R: 멱등성 키 존재 여부 확인 (GET idempotency:{key})
+    %% Step 1: 멱등성 체크 (SETNX)
+    S->>R: 멱등성 키 선점 (SETNX idempotency:{key}, TTL 24h)
     alt 이미 처리된 요청
-        R-->>S: 기존 주문 ID
+        R-->>S: 선점 실패 (키 이미 존재)
         S->>DB: 기존 주문 조회
         DB-->>S: order
         S-->>C: 200 기존 주문 응답
     end
-    R-->>S: 키 없음 (신규 요청)
+    R-->>S: 선점 성공 (신규 요청)
 
-    %% Step 2: 요청 검증
-    S->>S: 결제 수단 조합 검증<br/>(카드 + Y페이 혼용 불가)
-    alt 잘못된 결제 조합
-        S-->>C: 400 {"code": "PAYMENT001", "message": "신용카드와 Y페이는 혼용할 수 없습니다."}
-    end
-
-    S->>S: 결제 금액 합계 = 상품 가격 검증
-    alt 금액 불일치
-        S-->>C: 400 {"code": "PAYMENT002", "message": "결제 금액이 상품 가격과 일치하지 않습니다."}
+    %% Step 2: 오픈 시간 검증
+    S->>DB: 상품 조회
+    alt 판매 시작 전
+        S->>R: 멱등성 키 해제
+        S-->>C: 403 {"code": "PRODUCT002", "message": "아직 판매가 시작되지 않았습니다."}
     end
 
     %% Step 3: 재고 차감 (Redis Lua Script)
     S->>R: Lua Script 실행<br/>재고 확인 + 차감 (원자적)
     alt 재고 부족
         R-->>S: 재고 없음
-        S-->>C: 409 {"code": "STOCK001", "message": "재고가 부족합니다."}
+        S->>R: 멱등성 키 해제
+        S-->>C: 409 {"code": "STOCK002", "message": "재고가 부족합니다."}
     end
     R-->>S: 재고 차감 성공
 
@@ -78,7 +75,10 @@ sequenceDiagram
     S->>DB: 주문 생성 (status: PENDING)
     DB-->>S: orderId
 
-    %% Step 5: 결제 처리
+    %% Step 5: 결제 검증 및 처리
+    S->>S: 결제 금액 합계 = 상품 가격 검증
+    S->>S: 결제 수단 조합 검증 (카드 + Y페이 혼용 불가)
+
     alt Y포인트 포함
         S->>DB: 포인트 잔액 확인 및 차감
         alt 포인트 부족
@@ -104,7 +104,6 @@ sequenceDiagram
     S->>DB: 결제 내역 저장
     S->>DB: 주문 상태 변경 (COMPLETED)
     S->>DB: DB 재고 차감
-    S->>R: 멱등성 키 저장 (SET idempotency:{key}, TTL 24h)
 
     S-->>C: 200 {orderId, orderNumber, totalAmount, orderStatus, payments}
 ```
