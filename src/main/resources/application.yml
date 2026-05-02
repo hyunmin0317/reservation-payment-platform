@@ -59,6 +59,26 @@ server:
 spring:
   config:
     activate:
+      on-profile: docker
+
+  datasource:
+    url: jdbc:mysql://mysql:3306/reservation?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    show-sql: false
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+---
+spring:
+  config:
+    activate:
       on-profile: docs
 
   datasource:

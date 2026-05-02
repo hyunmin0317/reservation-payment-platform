@@ -67,28 +67,14 @@ src/main/java/com/reservation/
 
 ## 실행 방법
 
-### 1. 사전 요구사항
-- Java 17+
+### 사전 요구사항
 - Docker, Docker Compose
 
-### 2. 인프라 실행
+### 실행
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
-
-### 3. 애플리케이션 실행
-```bash
-./gradlew bootRun
-```
-
-### 4. 분산 환경 테스트 (2대 서버)
-```bash
-# 서버 1 (8080 포트)
-./gradlew bootRun --args='--server.port=8080'
-
-# 서버 2 (8081 포트)
-./gradlew bootRun --args='--server.port=8081'
-```
+> 애플리케이션(Spring Boot) + MySQL + Redis가 모두 실행됩니다.
 
 ---
 
