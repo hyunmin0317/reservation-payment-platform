@@ -127,7 +127,7 @@ erDiagram
 | order_id | BIGINT | FK, NOT NULL | 주문 ID |
 | payment_method | VARCHAR(20) | NOT NULL | 결제 수단 (CREDIT_CARD/Y_PAY/Y_POINT) |
 | amount | INT | NOT NULL | 결제 금액 |
-| status | VARCHAR(20) | NOT NULL | 결제 상태 (PENDING/APPROVED/FAILED/CANCELLED) |
+| status | VARCHAR(20) | NOT NULL | 결제 상태 (PENDING/APPROVED/FAILED/CANCELLED/CANCEL_FAILED) |
 | transaction_id | VARCHAR(100) | | 거래 ID |
 | created_at | DATETIME | NOT NULL | 생성일시 |
 | updated_at | DATETIME | NOT NULL | 수정일시 |

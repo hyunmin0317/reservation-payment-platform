@@ -218,11 +218,12 @@ public interface PaymentStrategy {
 | 재고 관리 | Redis Lua Script | DB 비관적 락 |
 | 재고 조회 (Checkout) | Redis GET | DB 조회 |
 | 멱등성 선점 | Redis SETNX (TTL 24h) | DB UNIQUE 제약조건 |
-| Rate Limiting | Redis Lua Script | 비활성화 |
+| Rate Limiting | Redis Lua Script | 로컬 메모리 Rate Limiting |
 
 **구현 방식**
 
-- `RedisConnectionFailureException` catch로 장애 감지
+- `RedisStockService`에 Resilience4j 서킷브레이커(`redis`)를 적용하여 Redis 반복 장애 시 타임아웃 대기 없이 즉시 DB Fallback 전환
+- 서킷 OPEN 시 Redis 연결 시도 자체를 생략하여 응답 지연 방지
 - `RedisStockService.decrease()`가 `boolean`(Redis 사용 여부)을 반환하여 보상 트랜잭션 시 Redis 복구 필요 여부를 판단
 - DB Fallback으로 재고를 이미 차감한 경우, `OrderTransactionService`에서 DB 재고 중복 차감을 방지
 
@@ -299,14 +300,13 @@ Nginx 기본 round-robin을 사용합니다. 재고 차감은 Redis 단일 스�
 | 실패 유형 | 원인 | ErrorCode | HTTP |
 |----------|------|-----------|------|
 | 한도 초과 | 사용자 결제 한도 초과 | PAYMENT_LIMIT_EXCEEDED | 400 |
-| 타임아웃 | PG/Y페이 응답 지연 | PAYMENT_TIMEOUT | 503 |
-| 네트워크 오류 | 연결 실패, 예외 발생 | PAYMENT_TIMEOUT | 503 |
+| 타임아웃/네트워크 오류 | PG/Y페이 응답 지연, 연결 실패 | PAYMENT_FAILED | 500 |
 | 서킷 오픈 | 장애 누적으로 서킷브레이커 차단 | PAYMENT_SERVICE_UNAVAILABLE | 503 |
 | 기타 실패 | 그 외 거절 사유 | PAYMENT_FAILED | 500 |
 
 ### 서킷브레이커 (Resilience4j)
 
-`ExternalPaymentStrategy`에서 외부 결제 클라이언트 호출을 `CircuitBreaker.executeSupplier()`로 감싸 장애 전파를 방지합니다.
+`ExternalPaymentStrategy`에서 외부 결제 클라이언트 호출을 `CircuitBreaker.executeSupplier()`로 감싸 장애 전파를 방지합니다. 서킷브레이커는 PG사별로 분리(`creditCard`, `yPay`)하여 한 PG사의 장애가 다른 정상 PG사까지 차단하지 않도록 격리합니다.
 
 **설정값 및 근거**
 
@@ -384,7 +384,8 @@ self-invocation 시 Spring AOP 프록시가 동작하지 않는 문제를 방지
 
 - 실패 이력을 남기려면 주문 생성과 결제를 별도 트랜잭션으로 분리해야 하는데, 이 경우 결제 성공 후 주문 확정 실패 시 보상 로직이 복잡해짐
 - 현재 구조에서는 주문 생성~결제~재고 차감~주문 확정이 하나의 트랜잭션이므로, 어느 단계에서 실패하든 원자적으로 롤백되어 데이터 정합성이 보장됨
-- 실패 추적이 필요한 경우, 별도의 실패 로그 테이블이나 모니터링 시스템으로 대응하는 것이 트랜잭션 분리보다 단순
+- 실패 추적을 위해 `OrderTransactionService.logFailure()`에서 userId, productId, idempotencyKey, 실패 사유를 구조화된 로그로 기록
+- 결제 취소 실패 시 `Payment.status`를 `CANCEL_FAILED`로 마킹하여 추후 배치 처리 또는 수동 확인이 가능하도록 함
 
 ---
 
@@ -437,9 +438,10 @@ self-invocation 시 Spring AOP 프록시가 동작하지 않는 문제를 방지
 
 ### Resilience4j
 
-- 외부 결제 연동부에 서킷브레이커 패턴을 적용하기 위해 도입
+- 외부 결제 연동부(`creditCard`, `yPay`)와 Redis 연동부(`redis`)에 서킷브레이커 패턴을 적용하기 위해 도입
+- PG사별, Redis별로 서킷브레이커를 분리하여 장애가 격리되도록 설계
 - Spring Boot 3과의 통합이 우수하며, Netflix Hystrix의 후속으로 가볍고 모듈화되어 있음
-- `CircuitBreakerRegistry`를 통한 프로그래밍 방식 적용으로 추상 클래스(`ExternalPaymentStrategy`)에서도 유연하게 사용 가능
+- YAML auto-configuration으로 인스턴스별 설정을 선언적으로 관리
 
 ### Spring Data Redis
 
