@@ -69,6 +69,7 @@ class CircuitBreakerTest extends IntegrationTestSupport {
 
         circuitBreakerRegistry.circuitBreaker("creditCard").reset();
         circuitBreakerRegistry.circuitBreaker("yPay").reset();
+        circuitBreakerRegistry.circuitBreaker("redis").reset();
 
         User user = userRepository.saveAndFlush(User.create("테스트유저", "test@test.com", 50000));
         Product product = productRepository.saveAndFlush(Product.create(
