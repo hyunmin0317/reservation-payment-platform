@@ -36,6 +36,60 @@ Swagger UI에서 API를 직접 테스트할 수 있습니다.
 http://localhost/swagger-ui/index.html
 ```
 
+#### curl 예시
+
+```bash
+# Checkout API — 주문서 진입 (사용자 1, 상품 1)
+curl -s http://localhost/api/checkout/products/1 \
+  -H "X-User-Id: 1" | jq
+
+# Booking API — 신용카드 단일 결제
+curl -s -X POST http://localhost/api/bookings \
+  -H "Content-Type: application/json" \
+  -H "X-User-Id: 1" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"productId": 1, "payments": [{"method": "CREDIT_CARD", "amount": 150000}]}' | jq
+
+# Booking API — 복합 결제 (카드 + 포인트)
+curl -s -X POST http://localhost/api/bookings \
+  -H "Content-Type: application/json" \
+  -H "X-User-Id: 3" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"productId": 2, "payments": [{"method": "CREDIT_CARD", "amount": 100000}, {"method": "Y_POINT", "amount": 100000}]}' | jq
+```
+
+### 초기 데이터
+
+`docker compose up` 시 아래 데이터가 자동으로 생성됩니다.
+
+**상품**
+
+| ID | 이름 | 가격 | 입실 | 퇴실 | 재고 |
+|----|------|------|------|------|------|
+| 1 | 제주 오션뷰 디럭스 | 150,000원 | 15:00 | 11:00 | 10개 |
+| 2 | 서울 시티뷰 스위트 | 200,000원 | 15:00 | 11:00 | 10개 |
+| 3 | 부산 해운대 프리미엄 | 180,000원 | 16:00 | 11:00 | 10개 |
+| 4 | 강릉 경포 풀빌라 | 250,000원 | 15:00 | 11:00 | 10개 |
+| 5 | 여수 마린뷰 패밀리 | 170,000원 | 15:00 | 12:00 | 10개 |
+
+**사용자**
+
+| ID | 이름 | 이메일 | 포인트 |
+|----|------|--------|--------|
+| 1 | 김철수 | kim@example.com | 100,000 |
+| 2 | 이영희 | lee@example.com | 50,000 |
+| 3 | 박민수 | park@example.com | 200,000 |
+| 4 | 정수진 | jung@example.com | 0 |
+| 5 | 최동욱 | choi@example.com | 300,000 |
+
+### 테스트
+
+```bash
+./gradlew test
+```
+
+> 테스트 실행에는 Docker가 필요합니다 (Testcontainers 사용).
+
 ---
 
 ## 전체 구조
