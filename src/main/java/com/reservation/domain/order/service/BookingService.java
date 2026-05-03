@@ -10,7 +10,6 @@ import com.reservation.domain.payment.repository.PaymentRepository;
 import com.reservation.domain.product.entity.Product;
 import com.reservation.domain.product.service.ProductService;
 import com.reservation.domain.stock.service.RedisStockService;
-import com.reservation.domain.user.entity.User;
 import com.reservation.domain.user.service.UserService;
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
@@ -42,13 +41,13 @@ public class BookingService {
             idempotencyService.release(idempotencyKey);
             throw new GeneralException(ErrorCode.SALE_NOT_STARTED);
         }
-        User user = userService.getUser(userId);
+        userService.getUser(userId);
 
         boolean redisUsed = false;
 
         try {
             redisUsed = redisStockService.decrease(product.getId());
-            OrderResult result = orderTransactionService.process(user, product, idempotencyKey, request, redisUsed);
+            OrderResult result = orderTransactionService.process(userId, product, idempotencyKey, request, redisUsed);
             return BookingResponse.of(result.order(), result.payments());
         } catch (DataIntegrityViolationException e) {
             if (redisUsed) {
