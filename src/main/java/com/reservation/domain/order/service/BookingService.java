@@ -54,7 +54,12 @@ public class BookingService {
             if (redisUsed) {
                 redisStockService.increase(product.getId());
             }
-            throw new GeneralException(ErrorCode.DUPLICATE_ORDER);
+            return orderRepository.findByIdempotencyKey(idempotencyKey)
+                    .map(existingOrder -> BookingResponse.of(existingOrder, paymentRepository.findByOrderId(existingOrder.getId())))
+                    .orElseThrow(() -> {
+                        idempotencyService.release(idempotencyKey);
+                        return new GeneralException(ErrorCode.DUPLICATE_ORDER);
+                    });
         } catch (Exception e) {
             if (redisUsed) {
                 redisStockService.increase(product.getId());
