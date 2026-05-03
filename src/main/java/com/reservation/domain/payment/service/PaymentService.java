@@ -92,11 +92,12 @@ public class PaymentService {
                 PaymentStrategy strategy = strategyMap.get(completed.getMethod());
                 strategy.cancel(completed, order);
                 completed.cancel();
-                paymentRepository.save(completed);
             } catch (Exception e) {
-                log.error("결제 취소 실패 (paymentId: {}, method: {}): {}",
-                        completed.getId(), completed.getMethod(), e.getMessage());
+                log.error("결제 취소 실패 (paymentId: {}, method: {}, transactionId: {}): {}",
+                        completed.getId(), completed.getMethod(), completed.getTransactionId(), e.getMessage(), e);
+                completed.cancelFailed();
             }
+            paymentRepository.save(completed);
         }
     }
 }
