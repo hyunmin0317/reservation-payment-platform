@@ -2,9 +2,9 @@ package com.reservation.domain.stock.service;
 
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
-import lombok.RequiredArgsConstructor;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
@@ -13,7 +13,6 @@ import java.util.List;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class RedisStockService {
 
     private static final String STOCK_KEY_PREFIX = "stock:product:";
@@ -21,11 +20,23 @@ public class RedisStockService {
     private final RedisTemplate<String, String> redisTemplate;
     private final RedisScript<Long> decreaseStockScript;
     private final StockService stockService;
+    private final CircuitBreaker circuitBreaker;
+
+    public RedisStockService(RedisTemplate<String, String> redisTemplate,
+                             RedisScript<Long> decreaseStockScript,
+                             StockService stockService,
+                             CircuitBreakerRegistry circuitBreakerRegistry) {
+        this.redisTemplate = redisTemplate;
+        this.decreaseStockScript = decreaseStockScript;
+        this.stockService = stockService;
+        this.circuitBreaker = circuitBreakerRegistry.circuitBreaker("redis");
+    }
 
     public boolean decrease(Long productId) {
         try {
             String key = STOCK_KEY_PREFIX + productId;
-            Long result = redisTemplate.execute(decreaseStockScript, List.of(key));
+            Long result = circuitBreaker.executeSupplier(() ->
+                    redisTemplate.execute(decreaseStockScript, List.of(key)));
 
             if (result == -1L) {
                 throw new GeneralException(ErrorCode.STOCK_NOT_FOUND);
@@ -34,7 +45,9 @@ public class RedisStockService {
                 throw new GeneralException(ErrorCode.STOCK_SOLD_OUT);
             }
             return true;
-        } catch (RedisConnectionFailureException e) {
+        } catch (GeneralException e) {
+            throw e;
+        } catch (Exception e) {
             log.warn("Redis 장애 감지, DB Fallback으로 전환: {}", e.getMessage());
             stockService.decreaseWithPessimisticLock(productId);
             return false;
@@ -44,8 +57,9 @@ public class RedisStockService {
     public void increase(Long productId) {
         try {
             String key = STOCK_KEY_PREFIX + productId;
-            redisTemplate.opsForValue().increment(key);
-        } catch (RedisConnectionFailureException e) {
+            circuitBreaker.executeRunnable(() ->
+                    redisTemplate.opsForValue().increment(key));
+        } catch (Exception e) {
             log.warn("Redis 장애로 재고 복구 생략 (DB 트랜잭션 롤백으로 처리): {}", e.getMessage());
         }
     }
@@ -53,12 +67,13 @@ public class RedisStockService {
     public int getRemainingStock(Long productId) {
         try {
             String key = STOCK_KEY_PREFIX + productId;
-            String value = redisTemplate.opsForValue().get(key);
+            String value = circuitBreaker.executeSupplier(() ->
+                    redisTemplate.opsForValue().get(key));
             if (value == null) {
                 return stockService.getStockByProductId(productId).getRemainingQuantity();
             }
             return Integer.parseInt(value);
-        } catch (RedisConnectionFailureException e) {
+        } catch (Exception e) {
             log.warn("Redis 장애 감지, DB Fallback으로 재고 조회: {}", e.getMessage());
             return stockService.getStockByProductId(productId).getRemainingQuantity();
         }
