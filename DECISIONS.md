@@ -261,7 +261,7 @@ Lua 스크립트로 INCR + EXPIRE를 원자적으로 처리하여 사용자별 �
 
 - 악의적 반복 요청이나 봇을 차단하여 정상 사용자의 기회 보호
 - `/api/bookings` 경로에만 적용 (조회 API는 제한 불필요)
-- Redis 장애 시 비활성화 — DB 비관적 락이 자연스러운 속도 제한 역할
+- Redis 장애 시 로컬 메모리 Rate Limiting으로 Fallback
 - Lua 스크립트로 INCR과 EXPIRE를 하나의 원자적 연산으로 처리하여 Race Condition 방지
 
 **글로벌 Rate Limit 미적용 근거**

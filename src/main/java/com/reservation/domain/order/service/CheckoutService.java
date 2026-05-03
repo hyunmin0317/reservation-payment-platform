@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -23,6 +25,6 @@ public class CheckoutService {
         Product product = productService.getProduct(productId);
         int remainingStock = redisStockService.getRemainingStock(productId);
         User user = userService.getUser(userId);
-        return CheckoutResponse.of(product, remainingStock, user);
+        return CheckoutResponse.of(product, remainingStock, user, LocalDateTime.now());
     }
 }

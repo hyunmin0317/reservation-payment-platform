@@ -127,9 +127,13 @@ X-User-Id: {userId}
   "checkOutTime": "11:00",
   "description": "제주도 오션뷰 스위트룸",
   "remainingStock": 7,
+  "saleStartDate": null,
   "saleStartTime": "00:00",
+  "serverTime": "2026-05-03T16:30:00",
   "userPoint": 10000,
-  "saleOpen": true
+  "maxUsablePoint": 10000,
+  "requiredPaymentAmount": 40000,
+  "checkoutStatus": "AVAILABLE"
 }
 ```
 
@@ -188,7 +192,7 @@ Content-Type: application/json
 
 ```json
 {
-  "code": "STOCK001",
+  "code": "STOCK002",
   "message": "재고가 부족합니다."
 }
 ```
@@ -324,8 +328,8 @@ sequenceDiagram
     participant R as Redis
     participant DB as MySQL
 
-    C->>S: GET /api/checkout/1 (X-User-Id: 1)
-    S->>S: 상품 정보 조회 (로컬 캐시)
+    C->>S: GET /api/checkout/products/1 (X-User-Id: 1)
+    S->>DB: 상품 정보 조회
     S->>R: 잔여 재고 조회
     S->>DB: 사용자 포인트 조회
     S-->>C: 상품 정보 + 잔여 재고 + 포인트 + 판매 여부 응답

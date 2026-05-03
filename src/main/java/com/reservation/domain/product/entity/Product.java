@@ -44,6 +44,11 @@ public class Product extends BaseEntity {
     }
 
     public static Product create(String name, int price, LocalTime checkInTime, LocalTime checkOutTime, String description, LocalTime saleStartTime) {
+        return create(name, price, checkInTime, checkOutTime, description, saleStartTime, null);
+    }
+
+    public static Product create(String name, int price, LocalTime checkInTime, LocalTime checkOutTime, String description,
+                                 LocalTime saleStartTime, LocalDate saleStartDate) {
         Product product = new Product();
         product.name = name;
         product.price = price;
@@ -51,11 +56,15 @@ public class Product extends BaseEntity {
         product.checkOutTime = checkOutTime;
         product.description = description;
         product.saleStartTime = saleStartTime;
+        product.saleStartDate = saleStartDate;
         return product;
     }
 
     public boolean isSaleOpen() {
-        LocalDateTime now = LocalDateTime.now();
+        return isSaleOpenAt(LocalDateTime.now());
+    }
+
+    public boolean isSaleOpenAt(LocalDateTime now) {
         if (saleStartDate != null) {
             return !now.isBefore(LocalDateTime.of(saleStartDate, saleStartTime));
         }

@@ -83,6 +83,10 @@ class CheckoutControllerTest extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productName").value("테스트 숙소"))
                 .andExpect(jsonPath("$.remainingStock").value(10))
-                .andExpect(jsonPath("$.userPoint").value(50000));
+                .andExpect(jsonPath("$.userPoint").value(50000))
+                .andExpect(jsonPath("$.maxUsablePoint").value(50000))
+                .andExpect(jsonPath("$.requiredPaymentAmount").value(50000))
+                .andExpect(jsonPath("$.checkoutStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.serverTime").exists());
     }
 }
