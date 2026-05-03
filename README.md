@@ -201,18 +201,18 @@ X-User-Id: {userId}
 ```json
 {
   "productId": 1,
-  "productName": "제주 오션뷰 스위트",
-  "price": 50000,
-  "checkInTime": "15:00",
-  "checkOutTime": "11:00",
-  "description": "제주도 오션뷰 스위트룸",
-  "remainingStock": 7,
+  "productName": "제주 오션뷰 디럭스",
+  "price": 150000,
+  "checkInTime": "15:00:00",
+  "checkOutTime": "11:00:00",
+  "description": "제주 바다가 한눈에 보이는 디럭스 객실",
+  "remainingStock": 10,
   "saleStartDate": null,
-  "saleStartTime": "00:00",
+  "saleStartTime": "00:00:00",
   "serverTime": "2026-05-03T16:30:00",
-  "userPoint": 10000,
-  "maxUsablePoint": 10000,
-  "requiredPaymentAmount": 40000,
+  "userPoint": 100000,
+  "maxUsablePoint": 100000,
+  "requiredPaymentAmount": 50000,
   "checkoutStatus": "AVAILABLE"
 }
 ```
@@ -234,11 +234,11 @@ Content-Type: application/json
   "payments": [
     {
       "method": "CREDIT_CARD",
-      "amount": 40000
+      "amount": 50000
     },
     {
       "method": "Y_POINT",
-      "amount": 10000
+      "amount": 100000
     }
   ]
 }
@@ -248,18 +248,18 @@ Content-Type: application/json
 ```json
 {
   "orderId": 1,
-  "orderNumber": "ORD-20260501-a3f2b1c4",
-  "totalAmount": 50000,
+  "orderNumber": "ORD-20260503-a3f2b1c4",
+  "totalAmount": 150000,
   "orderStatus": "COMPLETED",
   "payments": [
     {
       "method": "CREDIT_CARD",
-      "amount": 40000,
+      "amount": 50000,
       "status": "APPROVED"
     },
     {
       "method": "Y_POINT",
-      "amount": 10000,
+      "amount": 100000,
       "status": "APPROVED"
     }
   ]
@@ -283,6 +283,7 @@ Content-Type: application/json
 | 400 | `PAYMENT003` | 외부 결제 수단은 하나만 사용 가능 |
 | 400 | `PAYMENT004` | 결제 한도 초과 |
 | 400 | `PAYMENT007` | 결제 금액 합계 불일치 |
+| 400 | `PAYMENT008` | 지원하지 않는 결제 수단 |
 | 403 | `PRODUCT002` | 아직 판매가 시작되지 않음 |
 | 404 | `PRODUCT001` | 상품을 찾을 수 없음 |
 | 404 | `USER001` | 사용자를 찾을 수 없음 |

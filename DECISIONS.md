@@ -277,7 +277,7 @@ public interface PaymentStrategy {
 
 | 구간 | 1000TPS 중 처리량 | 설명 |
 |------|-----------------|------|
-| Rate Limiting | 봇/반복 요청 차단 | Lua 스크립트로 사용자별 초당 5회 제한, Redis 장애 시 로컬 메모리 Fallback |
+| Rate Limiting | 봇/반복 요청 차단 | Lua 스크립트로 사용자별 초당 5회 제한 (`application.yml`에서 설정 변경 가능), Redis 장애 시 로컬 메모리 Fallback |
 | Redis 재고 차감 | 10건 성공, 나머지 즉시 거절 | 재고 소진 후 DB 접근 0 |
 | DB 결제/주문 | 최대 10건 | 커넥션 풀 여유 |
 
