@@ -23,7 +23,7 @@ public class CheckoutController {
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @ApiResponse(responseCode = "404", description = "상품 또는 사용자를 찾을 수 없음")
     @GetMapping("/products/{productId}")
-    public ResponseEntity<CheckoutResponse> checkout(
+    public ResponseEntity<CheckoutResponse> getCheckout(
             @Parameter(description = "상품 ID") @PathVariable Long productId,
             @Parameter(description = "사용자 ID", required = true) @RequestHeader(HeaderConstants.USER_ID) Long userId) {
         CheckoutResponse response = checkoutService.getCheckout(productId, userId);
