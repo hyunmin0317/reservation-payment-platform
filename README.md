@@ -128,7 +128,8 @@ X-User-Id: {userId}
   "description": "제주도 오션뷰 스위트룸",
   "remainingStock": 7,
   "saleStartTime": "00:00",
-  "userPoint": 10000
+  "userPoint": 10000,
+  "saleOpen": true
 }
 ```
 
@@ -206,7 +207,6 @@ Content-Type: application/json
 | 429 | `COMMON005` | 요청 횟수 초과 (Rate Limiting) |
 | 500 | `PAYMENT001` | 결제 실패 |
 | 500 | `COMMON000` | 서버 내부 오류 |
-| 503 | `PAYMENT005` | 결제 요청 시간 초과 |
 | 503 | `PAYMENT006` | 결제 서비스 일시 이용 불가 (서킷 오픈) |
 
 ---
@@ -257,6 +257,7 @@ erDiagram
         time check_out_time
         varchar description
         time sale_start_time
+        date sale_start_date
         datetime created_at
         datetime updated_at
     }
@@ -324,10 +325,10 @@ sequenceDiagram
     participant DB as MySQL
 
     C->>S: GET /api/checkout/1 (X-User-Id: 1)
-    S->>DB: 상품 정보 조회
+    S->>S: 상품 정보 조회 (로컬 캐시)
     S->>R: 잔여 재고 조회
     S->>DB: 사용자 포인트 조회
-    S-->>C: 상품 정보 + 잔여 재고 + 포인트 응답
+    S-->>C: 상품 정보 + 잔여 재고 + 포인트 + 판매 여부 응답
 ```
 
 ### Booking API 플로우
@@ -391,10 +392,10 @@ sequenceDiagram
     participant DB as MySQL
 
     C->>S: POST /api/bookings
-    S->>R: 재고 차감 시도
-    R--xS: Redis 연결 실패
+    S->>R: 재고 차감 시도 (서킷브레이커)
+    R--xS: Redis 연결 실패 / 서킷 OPEN
 
-    Note over S: Fallback 전략 실행
+    Note over S: DB Fallback 전환
 
     S->>DB: 비관적 락으로 재고 차감
     alt 재고 확보 성공
