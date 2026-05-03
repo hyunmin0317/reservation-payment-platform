@@ -34,6 +34,7 @@ public enum ErrorCode {
     PAYMENT_TIMEOUT(503, "PAYMENT005", "결제 요청 시간이 초과되었습니다."),
     PAYMENT_SERVICE_UNAVAILABLE(503, "PAYMENT006", "결제 서비스를 일시적으로 이용할 수 없습니다."),
     INVALID_PAYMENT_AMOUNT(400, "PAYMENT007", "결제 금액 합계가 상품 가격과 일치하지 않습니다."),
+    UNSUPPORTED_PAYMENT_METHOD(400, "PAYMENT008", "지원하지 않는 결제 수단입니다."),
 
     // Order
     DUPLICATE_ORDER(409, "ORDER001", "이미 처리된 요청입니다."),
