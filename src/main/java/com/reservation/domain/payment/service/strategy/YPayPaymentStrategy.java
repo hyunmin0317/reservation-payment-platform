@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 public class YPayPaymentStrategy extends ExternalPaymentStrategy {
 
     public YPayPaymentStrategy(YPayClient yPayClient, CircuitBreakerRegistry registry) {
-        super(yPayClient, registry);
+        super(yPayClient, registry, "yPay");
     }
 
     @Override

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 public class CreditCardPaymentStrategy extends ExternalPaymentStrategy {
 
     public CreditCardPaymentStrategy(PgClient pgClient, CircuitBreakerRegistry registry) {
-        super(pgClient, registry);
+        super(pgClient, registry, "creditCard");
     }
 
     @Override

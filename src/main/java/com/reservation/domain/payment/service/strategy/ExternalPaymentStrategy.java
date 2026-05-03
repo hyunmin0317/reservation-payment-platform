@@ -15,9 +15,9 @@ public abstract class ExternalPaymentStrategy implements PaymentStrategy {
     private final ExternalPaymentClient client;
     private final CircuitBreaker circuitBreaker;
 
-    protected ExternalPaymentStrategy(ExternalPaymentClient client, CircuitBreakerRegistry registry) {
+    protected ExternalPaymentStrategy(ExternalPaymentClient client, CircuitBreakerRegistry registry, String circuitBreakerName) {
         this.client = client;
-        this.circuitBreaker = registry.circuitBreaker("externalPayment");
+        this.circuitBreaker = registry.circuitBreaker(circuitBreakerName);
     }
 
     @Override
