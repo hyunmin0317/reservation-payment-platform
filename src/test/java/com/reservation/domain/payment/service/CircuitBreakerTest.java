@@ -67,7 +67,8 @@ class CircuitBreakerTest extends IntegrationTestSupport {
         productRepository.deleteAll();
         userRepository.deleteAll();
 
-        circuitBreakerRegistry.circuitBreaker("externalPayment").reset();
+        circuitBreakerRegistry.circuitBreaker("creditCard").reset();
+        circuitBreakerRegistry.circuitBreaker("yPay").reset();
 
         User user = userRepository.saveAndFlush(User.create("테스트유저", "test@test.com", 50000));
         Product product = productRepository.saveAndFlush(Product.create(
@@ -128,7 +129,7 @@ class CircuitBreakerTest extends IntegrationTestSupport {
     void circuitOpensAfterConsecutiveFailures() {
         when(pgClient.pay(anyInt())).thenThrow(new RuntimeException("PG down"));
 
-        CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("externalPayment");
+        CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("creditCard");
 
         for (int i = 0; i < 10; i++) {
             try {
