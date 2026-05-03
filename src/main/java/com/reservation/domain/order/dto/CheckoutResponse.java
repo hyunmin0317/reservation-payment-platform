@@ -33,7 +33,10 @@ public record CheckoutResponse(
         LocalTime saleStartTime,
 
         @Schema(description = "사용자 보유 포인트", example = "50000")
-        int userPoint
+        int userPoint,
+
+        @Schema(description = "판매 가능 여부", example = "true")
+        boolean saleOpen
 ) {
 
     public static CheckoutResponse of(Product product, int remainingStock, User user) {
@@ -46,7 +49,8 @@ public record CheckoutResponse(
                 product.getDescription(),
                 remainingStock,
                 product.getSaleStartTime(),
-                user.getPointBalance()
+                user.getPointBalance(),
+                product.isSaleOpen()
         );
     }
 }
