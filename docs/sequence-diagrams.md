@@ -13,7 +13,7 @@ sequenceDiagram
 
     S->>DB: 상품 정보 조회 (Product)
     DB-->>S: product
-    S->>R: 잔여 재고 조회 (GET stock:{productId})
+    S->>R: 잔여 재고 조회 (GET stock:product:{productId})
     R-->>S: remainingStock
     S->>DB: 사용자 포인트 조회 (User)
     DB-->>S: pointBalance
@@ -23,7 +23,8 @@ sequenceDiagram
     else 사용자 없음
         S-->>C: 404 {"code": "USER001", "message": "사용자를 찾을 수 없습니다."}
     else 정상
-        S-->>C: 200 {productId, productName, price, remainingStock, userPoint}
+        S->>S: 판매 가능 상태 및 포인트 사용 가능 금액 계산
+        S-->>C: 200 {productId, price, remainingStock, checkoutStatus, userPoint, maxUsablePoint, requiredPaymentAmount, serverTime}
     end
 ```
 
@@ -79,8 +80,8 @@ sequenceDiagram
         S->>DB: 포인트 잔액 확인 및 차감
         alt 포인트 부족
             S->>R: 재고 복구 (INCR)
-            S->>DB: 주문 상태 변경 (FAILED)
-            S-->>C: 400 {"code": "PAYMENT004", "message": "포인트가 부족합니다."}
+            Note over DB: 주문/결제는 트랜잭션 롤백으로 저장되지 않음
+            S-->>C: 400 {"code": "PAYMENT002", "message": "포인트가 부족합니다."}
         end
     end
 
@@ -90,8 +91,8 @@ sequenceDiagram
             PG-->>S: 승인 실패
             S->>DB: 포인트 환불 (포인트 사용 시)
             S->>R: 재고 복구 (INCR)
-            S->>DB: 주문 상태 변경 (FAILED)
-            S-->>C: 400 {"code": "PAYMENT003", "message": "결제 승인에 실패했습니다."}
+            Note over DB: 주문/결제는 트랜잭션 롤백으로 저장되지 않음
+            S-->>C: 400/500/503 결제 실패 응답<br/>(PAYMENT004/PAYMENT001/PAYMENT006 등)
         end
         PG-->>S: 승인 완료 (transactionId)
     end
@@ -130,8 +131,8 @@ sequenceDiagram
         PG-->>S: 승인 실패
         S->>DB: Y포인트 10000 환불 (보상 트랜잭션)
         S->>R: 재고 복구
-        S->>DB: 주문 FAILED
-        S-->>C: 400 결제 실패
+        Note over DB: 주문/결제는 트랜잭션 롤백으로 저장되지 않음
+        S-->>C: 400/500/503 결제 실패
     end
     PG-->>S: 승인 완료
 
@@ -183,9 +184,9 @@ sequenceDiagram
     S->>PG: 결제 승인 요청
     alt 결제 실패
         PG-->>S: 승인 실패
-        S->>DB: 재고 복구 (remaining_quantity + 1)
-        S->>DB: 주문 FAILED
-        S-->>C: 400 결제 실패
+        Note over S: DB Fallback 차감은 이미 커밋됨<br/>현재 구현은 재고 복구 없이 미달 판매를 허용
+        Note over DB: 주문은 트랜잭션 롤백으로 저장되지 않음
+        S-->>C: 400/500/503 결제 실패
     end
     PG-->>S: 승인 완료
 

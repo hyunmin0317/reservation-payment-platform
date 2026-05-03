@@ -15,9 +15,10 @@ public class StockService {
 
     private final StockRepository stockRepository;
 
-    public Stock getStockByProductId(Long productId) {
-        return stockRepository.findByProductId(productId)
+    public int getRemainingQuantity(Long productId) {
+        Stock stock = stockRepository.findByProductId(productId)
                 .orElseThrow(() -> new GeneralException(ErrorCode.STOCK_NOT_FOUND));
+        return stock.getRemainingQuantity();
     }
 
     @Transactional
@@ -27,5 +28,4 @@ public class StockService {
 
         stock.decrease();
     }
-
 }

@@ -67,16 +67,14 @@ public class RedisStockService {
     public int getRemainingStock(Long productId) {
         try {
             String key = STOCK_KEY_PREFIX + productId;
-            String value = circuitBreaker.executeSupplier(() ->
-                    redisTemplate.opsForValue().get(key));
-            if (value == null) {
-                return stockService.getStockByProductId(productId).getRemainingQuantity();
+            String value = circuitBreaker.executeSupplier(() -> redisTemplate.opsForValue().get(key));
+            if (value != null) {
+                return Integer.parseInt(value);
             }
-            return Integer.parseInt(value);
         } catch (Exception e) {
-            log.warn("Redis 장애 감지, DB Fallback으로 재고 조회: {}", e.getMessage());
-            return stockService.getStockByProductId(productId).getRemainingQuantity();
+            log.warn("Redis 재고 조회 실패, DB Fallback으로 재고 조회. productId={}, message={}", productId, e.getMessage());
         }
+        return stockService.getRemainingQuantity(productId);
     }
 
     public void initStock(Long productId, int quantity) {

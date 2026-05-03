@@ -1,6 +1,7 @@
 package com.reservation.domain.order.service;
 
 import com.reservation.domain.order.dto.CheckoutResponse;
+import com.reservation.domain.order.dto.CheckoutStatus;
 import com.reservation.domain.order.repository.OrderRepository;
 import com.reservation.domain.payment.repository.PaymentRepository;
 import com.reservation.domain.product.entity.Product;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,6 +80,40 @@ class CheckoutServiceTest extends IntegrationTestSupport {
         assertThat(response.price()).isEqualTo(150000);
         assertThat(response.remainingStock()).isEqualTo(10);
         assertThat(response.userPoint()).isEqualTo(50000);
+        assertThat(response.maxUsablePoint()).isEqualTo(50000);
+        assertThat(response.requiredPaymentAmount()).isEqualTo(100000);
+        assertThat(response.checkoutStatus()).isEqualTo(CheckoutStatus.AVAILABLE);
+        assertThat(response.serverTime()).isNotNull();
+    }
+
+    @DisplayName("판매 시작 전이면 WAITING 상태를 반환한다")
+    @Test
+    void checkoutReturnsWaitingBeforeSaleStarts() {
+        Product waitingProduct = productRepository.saveAndFlush(Product.create(
+                "오픈 예정 숙소", 150000,
+                LocalTime.of(15, 0), LocalTime.of(11, 0),
+                "판매 시작 전 상품",
+                LocalTime.MIDNIGHT,
+                LocalDate.now().plusDays(1)
+        ));
+        stockRepository.saveAndFlush(Stock.create(waitingProduct, 10));
+        redisStockService.initStock(waitingProduct.getId(), 10);
+
+        CheckoutResponse response = checkoutService.getCheckout(waitingProduct.getId(), user.getId());
+
+        assertThat(response.checkoutStatus()).isEqualTo(CheckoutStatus.WAITING);
+        assertThat(response.saleStartDate()).isEqualTo(LocalDate.now().plusDays(1));
+    }
+
+    @DisplayName("판매 중 재고가 없으면 SOLD_OUT 상태를 반환한다")
+    @Test
+    void checkoutReturnsSoldOutWhenStockIsEmpty() {
+        redisStockService.initStock(product.getId(), 0);
+
+        CheckoutResponse response = checkoutService.getCheckout(product.getId(), user.getId());
+
+        assertThat(response.remainingStock()).isZero();
+        assertThat(response.checkoutStatus()).isEqualTo(CheckoutStatus.SOLD_OUT);
     }
 
     @DisplayName("존재하지 않는 상품 ID로 조회 시 PRODUCT_NOT_FOUND 예외")
