@@ -44,19 +44,30 @@ public class Payment extends BaseEntity {
     }
 
     public void approve(String transactionId) {
+        validateStatus(PaymentStatus.PENDING);
         this.status = PaymentStatus.APPROVED;
         this.transactionId = transactionId;
     }
 
     public void fail() {
+        validateStatus(PaymentStatus.PENDING);
         this.status = PaymentStatus.FAILED;
     }
 
     public void cancel() {
+        validateStatus(PaymentStatus.APPROVED);
         this.status = PaymentStatus.CANCELLED;
     }
 
     public void cancelFailed() {
+        validateStatus(PaymentStatus.APPROVED);
         this.status = PaymentStatus.CANCEL_FAILED;
+    }
+
+    private void validateStatus(PaymentStatus expected) {
+        if (this.status != expected) {
+            throw new IllegalStateException(
+                    String.format("결제 상태를 변경할 수 없습니다. 현재: %s, 필요: %s", this.status, expected));
+        }
     }
 }

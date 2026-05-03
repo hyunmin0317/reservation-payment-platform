@@ -51,14 +51,24 @@ public class Order extends BaseEntity {
     }
 
     public void complete() {
+        validateStatus(OrderStatus.PENDING);
         this.status = OrderStatus.COMPLETED;
     }
 
     public void fail() {
+        validateStatus(OrderStatus.PENDING);
         this.status = OrderStatus.FAILED;
     }
 
     public void cancel() {
+        validateStatus(OrderStatus.COMPLETED);
         this.status = OrderStatus.CANCELLED;
+    }
+
+    private void validateStatus(OrderStatus expected) {
+        if (this.status != expected) {
+            throw new IllegalStateException(
+                    String.format("주문 상태를 변경할 수 없습니다. 현재: %s, 필요: %s", this.status, expected));
+        }
     }
 }
