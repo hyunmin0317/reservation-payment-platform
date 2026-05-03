@@ -3,10 +3,6 @@
 한정 수량 숙소 상품의 선착순 예약 및 결제를 처리하는 플랫폼입니다.
 분산 서버 환경에서 동시성 제어, 결제 안정성, 장애 대응을 고려하여 설계하였습니다.
 
----
-
-## 문서
-
 | 문서 | 설명 |
 |------|------|
 | [DECISIONS.md](DECISIONS.md) | 주요 기술적 쟁점과 선택 근거 |
@@ -16,7 +12,65 @@
 
 ---
 
-## 기술 스택
+## 실행 방법
+
+### 사전 요구사항
+- Docker, Docker Compose
+
+### 실행
+```bash
+docker compose up -d
+```
+> Nginx + Spring Boot 2대 + MySQL + Redis가 모두 실행됩니다.
+
+### 종료 및 초기화
+```bash
+docker compose down -v
+```
+
+### API 테스트
+
+Swagger UI에서 API를 직접 테스트할 수 있습니다.
+
+```
+http://localhost/swagger-ui/index.html
+```
+
+---
+
+## 전체 구조
+
+### 시스템 아키텍처
+
+```
+┌─────────┐     ┌─────────┐
+│ Client  │     │ Client  │
+└────┬────┘     └────┬────┘
+     │               │
+     └───────┬───────┘
+             │
+     ┌───────▼───────┐
+     │  Nginx (:80)  │
+     └───────┬───────┘
+             │
+     ┌───────┴───────┐
+     │               │
+┌────▼────┐    ┌────▼────┐
+│Server 1 │    │Server 2 │
+│ (:8080) │    │ (:8080) │
+└────┬────┘    └────┬────┘
+     │               │
+     └───────┬───────┘
+             │
+     ┌───────┴───────┐
+     │               │
+┌────▼────┐    ┌────▼────┐
+│  MySQL  │    │  Redis  │
+│(주문/결제)│    │(재고/멱등성)│
+└─────────┘    └─────────┘
+```
+
+### 기술 스택
 
 | 구분 | 기술 |
 |------|------|
@@ -28,9 +82,7 @@
 | Infra | Docker Compose (Nginx, MySQL, Redis) |
 | Library | Spring Data JPA, Spring Data Redis, Resilience4j |
 
----
-
-## 프로젝트 구조
+### 프로젝트 구조
 
 ```
 src/main/java/com/reservation/
@@ -74,32 +126,6 @@ src/main/java/com/reservation/
 
 ---
 
-## 실행 방법
-
-### 사전 요구사항
-- Docker, Docker Compose
-
-### 실행
-```bash
-docker compose up -d
-```
-> 애플리케이션(Spring Boot) + MySQL + Redis가 모두 실행됩니다.
-
-### 종료 및 초기화
-```bash
-docker compose down -v
-```
-
-### API 테스트
-
-Swagger UI에서 API를 직접 테스트할 수 있습니다.
-
-```
-http://localhost/swagger-ui/index.html
-```
-
----
-
 ## API 명세
 
 > **인증/인가 참고사항**
@@ -109,7 +135,7 @@ http://localhost/swagger-ui/index.html
 
 ### 1. GET /api/checkout/products/{productId} - 주문서 진입
 
-상품 정보 및 사용자의 가용 포인트를 조회합니다.
+상품 정보, 잔여 재고, 사용자의 가용 포인트 등을 조회합니다.
 
 **Request**
 ```
@@ -215,38 +241,6 @@ Content-Type: application/json
 
 ---
 
-## 시스템 아키텍처
-
-```
-┌─────────┐     ┌─────────┐
-│ Client  │     │ Client  │
-└────┬────┘     └────┬────┘
-     │               │
-     └───────┬───────┘
-             │
-     ┌───────▼───────┐
-     │  Nginx (:80)  │
-     └───────┬───────┘
-             │
-     ┌───────┴───────┐
-     │               │
-┌────▼────┐    ┌────▼────┐
-│Server 1 │    │Server 2 │
-│ (:8080) │    │ (:8080) │
-└────┬────┘    └────┬────┘
-     │               │
-     └───────┬───────┘
-             │
-     ┌───────┴───────┐
-     │               │
-┌────▼────┐    ┌────▼────┐
-│  MySQL  │    │  Redis  │
-│ (주문/결제)│    │ (재고/락) │
-└─────────┘    └─────────┘
-```
-
----
-
 ## ERD
 
 > 상세 ERD, 테이블 명세 및 DDL 스크립트는 [docs/erd.md](docs/erd.md)에서 확인할 수 있습니다.
@@ -317,7 +311,7 @@ erDiagram
 
 ## 시퀀스 다이어그램
 
-> 상세 시퀀스 다이어그램은 [docs/sequence-diagrams.md](docs/sequence-diagrams.md)에서 확인할 수 있습니다.
+> 상세 시퀀스 다이어그램(복합 결제, Redis 장애, 서킷브레이커 등)은 [docs/sequence-diagrams.md](docs/sequence-diagrams.md)에서 확인할 수 있습니다.
 
 ### Checkout API 플로우
 
@@ -386,26 +380,32 @@ sequenceDiagram
     end
 ```
 
-### 장애 발생 시 플로우 (Redis 장애)
+---
+
+## 플로우차트
+
+### Booking API 처리 흐름
 
 ```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    participant R as Redis
-    participant DB as MySQL
+flowchart TD
+    A[POST /api/bookings] --> B{멱등성 키 선점}
+    B -- 선점 실패 --> C[기존 주문 반환]
+    B -- 선점 성공 --> D{판매 시작 여부}
+    D -- 판매 전 --> E[403 응답 + 키 해제]
+    D -- 판매 중 --> F{Redis 재고 차감}
+    F -- 재고 없음 --> G[409 응답 + 키 해제]
+    F -- 차감 성공 --> H[주문 생성 - PENDING]
+    H --> I{결제 금액 검증}
+    I -- 불일치 --> J[보상: 재고 복구 + 키 해제]
+    I -- 일치 --> K{결제 처리}
+    K -- 실패 --> L[보상: 결제 취소 + 재고 복구 + 키 해제]
+    K -- 성공 --> M[DB 재고 차감 + 주문 확정 - COMPLETED]
+    M --> N[200 예약 완료]
 
-    C->>S: POST /api/bookings
-    S->>R: 재고 차감 시도 (서킷브레이커)
-    R--xS: Redis 연결 실패 / 서킷 OPEN
-
-    Note over S: DB Fallback 전환
-
-    S->>DB: 비관적 락으로 재고 차감
-    alt 재고 확보 성공
-        S->>DB: 결제 및 주문 처리
-        S-->>C: 200 예약 완료
-    else 재고 부족
-        S-->>C: 409 재고 부족
-    end
+    style N fill:#d4edda
+    style C fill:#d4edda
+    style E fill:#fff3cd
+    style G fill:#fff3cd
+    style J fill:#f8d7da
+    style L fill:#f8d7da
 ```

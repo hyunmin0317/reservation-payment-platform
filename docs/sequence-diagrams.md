@@ -233,3 +233,4 @@ sequenceDiagram
 
     Note over CB: 상태: CLOSED (정상 복귀)
 ```
+
