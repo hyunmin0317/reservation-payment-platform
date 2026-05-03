@@ -111,9 +111,9 @@ class CircuitBreakerTest extends IntegrationTestSupport {
                         .isEqualTo(ErrorCode.PAYMENT_LIMIT_EXCEEDED));
     }
 
-    @DisplayName("PG 타임아웃 시 PAYMENT_TIMEOUT 반환")
+    @DisplayName("PG 예외 발생 시 PAYMENT_FAILED 반환")
     @Test
-    void timeoutReturnsError() {
+    void exceptionReturnsPaymentFailed() {
         when(pgClient.pay(anyInt())).thenThrow(new RuntimeException("Connection timeout"));
 
         assertThatThrownBy(() -> paymentService.pay(order, List.of(
@@ -121,7 +121,7 @@ class CircuitBreakerTest extends IntegrationTestSupport {
         ), 100000))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
-                        .isEqualTo(ErrorCode.PAYMENT_TIMEOUT));
+                        .isEqualTo(ErrorCode.PAYMENT_FAILED));
     }
 
     @DisplayName("연속 실패 시 서킷이 OPEN되고 PAYMENT_SERVICE_UNAVAILABLE 반환")
