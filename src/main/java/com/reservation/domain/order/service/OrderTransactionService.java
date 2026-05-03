@@ -7,7 +7,10 @@ import com.reservation.domain.payment.service.PaymentService;
 import com.reservation.domain.stock.service.StockService;
 import com.reservation.domain.order.dto.BookingRequest;
 import com.reservation.domain.product.entity.Product;
-import com.reservation.domain.user.service.UserService;
+import com.reservation.domain.user.entity.User;
+import com.reservation.domain.user.repository.UserRepository;
+import com.reservation.global.exception.GeneralException;
+import com.reservation.global.exception.code.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,13 +27,16 @@ public class OrderTransactionService {
     private final PaymentService paymentService;
     private final StockService stockService;
     private final OrderNumberGenerator orderNumberGenerator;
-    private final UserService userService;
+    private final UserRepository userRepository;
 
     @Transactional
     public OrderResult process(Long userId, Product product, String idempotencyKey, BookingRequest request, boolean decreaseDbStock) {
+        User user = userRepository.findWithLockById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.USER_NOT_FOUND));
+
         Order order = Order.builder()
                 .orderNumber(orderNumberGenerator.generate())
-                .user(userService.getUser(userId))
+                .user(user)
                 .product(product)
                 .totalAmount(product.getPrice())
                 .idempotencyKey(idempotencyKey)
