@@ -22,7 +22,12 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        Long userId = Long.valueOf(userIdHeader);
+        Long userId;
+        try {
+            userId = Long.valueOf(userIdHeader);
+        } catch (NumberFormatException e) {
+            throw new GeneralException(ErrorCode.BAD_REQUEST);
+        }
         if (!rateLimitService.isAllowed(userId)) {
             throw new GeneralException(ErrorCode.RATE_LIMIT_EXCEEDED);
         }
