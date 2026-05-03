@@ -49,7 +49,7 @@ public class PaymentService {
                         .amount(request.amount())
                         .build();
 
-                PaymentStrategy strategy = strategyMap.get(request.method());
+                PaymentStrategy strategy = getStrategy(request.method());
                 strategy.pay(payment, order);
 
                 paymentRepository.save(payment);
@@ -86,10 +86,18 @@ public class PaymentService {
                 .toList();
     }
 
+    private PaymentStrategy getStrategy(PaymentMethod method) {
+        PaymentStrategy strategy = strategyMap.get(method);
+        if (strategy == null) {
+            throw new GeneralException(ErrorCode.UNSUPPORTED_PAYMENT_METHOD);
+        }
+        return strategy;
+    }
+
     private void rollback(List<Payment> completedPayments, Order order) {
         for (Payment completed : completedPayments) {
             try {
-                PaymentStrategy strategy = strategyMap.get(completed.getMethod());
+                PaymentStrategy strategy = getStrategy(completed.getMethod());
                 strategy.cancel(completed, order);
                 completed.cancel();
             } catch (Exception e) {
