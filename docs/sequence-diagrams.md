@@ -184,7 +184,7 @@ sequenceDiagram
     S->>PG: 결제 승인 요청
     alt 결제 실패
         PG-->>S: 승인 실패
-        Note over S: DB Fallback 차감은 이미 커밋됨<br/>현재 구현은 재고 복구 없이 미달 판매를 허용
+        S->>DB: DB 재고 복구 (increaseWithPessimisticLock)
         Note over DB: 주문은 트랜잭션 롤백으로 저장되지 않음
         S-->>C: 400/500/503 결제 실패
     end
@@ -194,7 +194,7 @@ sequenceDiagram
     S->>DB: 주문 COMPLETED
     S-->>C: 200 예약 완료
 
-    Note over S: Redis 복구 시 재고 동기화 필요
+    Note over S: Redis 복구 시 StockInitializer가 DB 기준으로 재동기화
 ```
 
 ---

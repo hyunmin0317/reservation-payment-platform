@@ -28,4 +28,12 @@ public class StockService {
 
         stock.decrease();
     }
+
+    @Transactional
+    public void increaseWithPessimisticLock(Long productId) {
+        Stock stock = stockRepository.findWithLockByProductId(productId)
+                .orElseThrow(() -> new GeneralException(ErrorCode.STOCK_NOT_FOUND));
+
+        stock.increase();
+    }
 }

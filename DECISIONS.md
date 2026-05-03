@@ -292,7 +292,7 @@ Nginx 기본 round-robin을 사용합니다. 재고 차감은 Redis 단일 스�
 - DB Fallback 시 성능 저하는 불가피하나, 재고 10개가 빠르게 소진되므로 실제 락 경합 시간은 짧음
 - 서킷 오픈 중에는 정상 요청도 즉시 실패하지만, PG 장애 상태에서 어차피 실패할 요청으로 서버 자원을 낭비하는 것보다 나음
 - Redis decrease 성공 후 결제 실패 시 increase로 재고를 복구하는데, 이 시점에 Redis 장애가 발생하면 Redis 재고가 DB보다 1 적게 남을 수 있음. DB 트랜잭션은 롤백되므로 DB 재고는 정상이며, 서버 재시작 시 `StockInitializer`가 DB 기준으로 Redis를 재동기화하여 해소됨
-- DB Fallback으로 재고를 차감한 후 결제가 실패하면, `decreaseWithPessimisticLock()`이 별도 트랜잭션에서 이미 커밋되어 DB 재고가 1 적게 남을 수 있음. 이는 Redis 장애 + 결제 실패가 동시에 발생하는 극히 드문 케이스이며, 재고가 1 적게 남는 것(미달 판매)은 초과판매보다 안전한 방향임
+- DB Fallback으로 재고를 차감한 후 결제가 실패하면, `decreaseWithPessimisticLock()`이 별도 트랜잭션에서 이미 커밋되어 있으므로 `increaseWithPessimisticLock()`으로 보상 복구 처리. Redis 정상 경로와 동일하게 결제 실패 시 재고가 원상 복구됨
 
 ---
 
@@ -354,10 +354,10 @@ Nginx 기본 round-robin을 사용합니다. 재고 차감은 Redis 단일 스�
 | 실패 지점 | 보상 동작 |
 |----------|---------|
 | 오픈 시간 검증 실패 | 멱등성 키 해제 (release) |
-| 결제 금액 불일치 | 멱등성 키 해제 + Redis 재고 복구 (INCR) |
-| 결제 중 포인트 부족 | 멱등성 키 해제 + Redis 재고 복구 (INCR) |
-| 결제 중 외부 결제 실패 | 포인트 환불 + 멱등성 키 해제 + Redis 재고 복구 |
-| DB 저장 실패 | 결제 취소 + 포인트 환불 + 멱등성 키 해제 + Redis 재고 복구 (DB는 트랜잭션 롤백) |
+| 결제 금액 불일치 | 멱등성 키 해제 + 재고 복구 (Redis INCR 또는 DB increase) |
+| 결제 중 포인트 부족 | 멱등성 키 해제 + 재고 복구 (Redis INCR 또는 DB increase) |
+| 결제 중 외부 결제 실패 | 포인트 환불 + 멱등성 키 해제 + 재고 복구 (Redis INCR 또는 DB increase) |
+| DB 저장 실패 | 결제 취소 + 포인트 환불 + 멱등성 키 해제 + 재고 복구 (Redis INCR 또는 DB increase) |
 
 결제 내부의 보상(포인트 환불, 외부 결제 취소)은 `PaymentService.rollback()`이 Strategy별 `cancel()`로 처리하고, Redis 재고 복구와 멱등성 키 해제는 `BookingService`에서 처리합니다.
 
