@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
@@ -35,6 +37,8 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private LocalTime saleStartTime;
 
+    private LocalDate saleStartDate;
+
     public static Product create(String name, int price, LocalTime checkInTime, LocalTime checkOutTime, String description) {
         return create(name, price, checkInTime, checkOutTime, description, LocalTime.MIDNIGHT);
     }
@@ -51,6 +55,10 @@ public class Product extends BaseEntity {
     }
 
     public boolean isSaleOpen() {
-        return !LocalTime.now().isBefore(saleStartTime);
+        LocalDateTime now = LocalDateTime.now();
+        if (saleStartDate != null) {
+            return !now.isBefore(LocalDateTime.of(saleStartDate, saleStartTime));
+        }
+        return !now.toLocalTime().isBefore(saleStartTime);
     }
 }

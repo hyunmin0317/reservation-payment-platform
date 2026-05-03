@@ -12,6 +12,7 @@ erDiagram
         time check_out_time "퇴실 시간"
         varchar(500) description "상품 설명"
         time sale_start_time "판매 시작 시간"
+        date sale_start_date "판매 시작 날짜 (nullable)"
         datetime created_at "생성일시"
         datetime updated_at "수정일시"
     }
@@ -78,6 +79,7 @@ erDiagram
 | check_out_time | TIME | NOT NULL | 퇴실 시간 |
 | description | VARCHAR(500) | | 상품 설명 |
 | sale_start_time | TIME | NOT NULL, DEFAULT '00:00:00' | 판매 시작 시간 |
+| sale_start_date | DATE | DEFAULT NULL | 판매 시작 날짜 (null이면 매일 반복) |
 | created_at | DATETIME | NOT NULL | 생성일시 |
 | updated_at | DATETIME | NOT NULL | 수정일시 |
 
@@ -143,6 +145,7 @@ CREATE TABLE product (
     check_out_time TIME NOT NULL,
     description VARCHAR(500),
     sale_start_time TIME NOT NULL DEFAULT '00:00:00',
+    sale_start_date DATE DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
