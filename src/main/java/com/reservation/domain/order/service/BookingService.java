@@ -64,6 +64,7 @@ public class BookingService {
                 redisStockService.increase(product.getId());
             }
             idempotencyService.release(idempotencyKey);
+            orderTransactionService.logFailure(userId, product.getId(), idempotencyKey, e.getMessage());
             throw e;
         }
     }

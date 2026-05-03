@@ -9,11 +9,13 @@ import com.reservation.domain.order.dto.BookingRequest;
 import com.reservation.domain.product.entity.Product;
 import com.reservation.domain.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderTransactionService {
@@ -43,6 +45,11 @@ public class OrderTransactionService {
         order.complete();
 
         return new OrderResult(order, payments);
+    }
+
+    public void logFailure(Long userId, Long productId, String idempotencyKey, String reason) {
+        log.warn("결제 실패 (userId: {}, productId: {}, idempotencyKey: {}, reason: {})",
+                userId, productId, idempotencyKey, reason);
     }
 
     public record OrderResult(Order order, List<Payment> payments) {
