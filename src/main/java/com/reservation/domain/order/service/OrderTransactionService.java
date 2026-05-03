@@ -7,7 +7,7 @@ import com.reservation.domain.payment.service.PaymentService;
 import com.reservation.domain.stock.service.StockService;
 import com.reservation.domain.order.dto.BookingRequest;
 import com.reservation.domain.product.entity.Product;
-import com.reservation.domain.user.entity.User;
+import com.reservation.domain.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,12 +22,13 @@ public class OrderTransactionService {
     private final PaymentService paymentService;
     private final StockService stockService;
     private final OrderNumberGenerator orderNumberGenerator;
+    private final UserService userService;
 
     @Transactional
-    public OrderResult process(User user, Product product, String idempotencyKey, BookingRequest request, boolean decreaseDbStock) {
+    public OrderResult process(Long userId, Product product, String idempotencyKey, BookingRequest request, boolean decreaseDbStock) {
         Order order = Order.builder()
                 .orderNumber(orderNumberGenerator.generate())
-                .user(user)
+                .user(userService.getUser(userId))
                 .product(product)
                 .totalAmount(product.getPrice())
                 .idempotencyKey(idempotencyKey)
