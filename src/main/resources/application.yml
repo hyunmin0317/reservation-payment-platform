@@ -44,6 +44,10 @@ resilience4j:
         permitted-number-of-calls-in-half-open-state: 2
         minimum-number-of-calls: 3
 
+rate-limit:
+  max-requests: 5
+  window-seconds: 1
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
