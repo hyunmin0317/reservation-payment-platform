@@ -7,14 +7,3 @@ spring:
     properties:
       hibernate:
         format_sql: false
-
-resilience4j:
-  circuitbreaker:
-    instances:
-      externalPayment:
-        sliding-window-type: COUNT_BASED
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
-        permitted-number-of-calls-in-half-open-state: 3
-        minimum-number-of-calls: 5
