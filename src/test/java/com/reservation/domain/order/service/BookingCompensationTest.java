@@ -119,9 +119,9 @@ class BookingCompensationTest extends IntegrationTestSupport {
         assertThat(orderRepository.count()).isZero();
     }
 
-    @DisplayName("카드 타임아웃 시 재고가 복구되고 멱등성 키가 해제되어 재시도 가능하다")
+    @DisplayName("카드 결제 예외 시 재고가 복구되고 멱등성 키가 해제되어 재시도 가능하다")
     @Test
-    void retryAllowedAfterTimeout() {
+    void retryAllowedAfterPaymentFailure() {
         when(pgClient.pay(anyInt()))
                 .thenThrow(new RuntimeException("Connection timeout"))
                 .thenReturn(PaymentResult.success("txn-001"));
@@ -134,7 +134,7 @@ class BookingCompensationTest extends IntegrationTestSupport {
         assertThatThrownBy(() -> bookingService.book(user.getId(), idempotencyKey, request))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
-                        .isEqualTo(ErrorCode.PAYMENT_TIMEOUT));
+                        .isEqualTo(ErrorCode.PAYMENT_FAILED));
 
         assertThat(redisStockService.getRemainingStock(product.getId())).isEqualTo(10);
 

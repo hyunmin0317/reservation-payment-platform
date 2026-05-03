@@ -9,7 +9,9 @@ import com.reservation.global.exception.code.ErrorCode;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public abstract class ExternalPaymentStrategy implements PaymentStrategy {
 
     private final ExternalPaymentClient client;
@@ -29,8 +31,9 @@ public abstract class ExternalPaymentStrategy implements PaymentStrategy {
             payment.fail();
             throw new GeneralException(ErrorCode.PAYMENT_SERVICE_UNAVAILABLE);
         } catch (Exception e) {
+            log.error("외부 결제 실패 (method: {}, amount: {}): {}", payment.getMethod(), payment.getAmount(), e.getMessage(), e);
             payment.fail();
-            throw new GeneralException(ErrorCode.PAYMENT_TIMEOUT);
+            throw new GeneralException(ErrorCode.PAYMENT_FAILED);
         }
 
         if (!result.success()) {
