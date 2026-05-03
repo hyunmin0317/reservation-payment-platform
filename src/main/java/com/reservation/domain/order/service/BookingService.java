@@ -10,6 +10,7 @@ import com.reservation.domain.payment.repository.PaymentRepository;
 import com.reservation.domain.product.entity.Product;
 import com.reservation.domain.product.service.ProductService;
 import com.reservation.domain.stock.service.RedisStockService;
+import com.reservation.domain.stock.service.StockService;
 import com.reservation.domain.user.service.UserService;
 import com.reservation.global.exception.GeneralException;
 import com.reservation.global.exception.code.ErrorCode;
@@ -26,6 +27,7 @@ public class BookingService {
     private final ProductService productService;
     private final UserService userService;
     private final RedisStockService redisStockService;
+    private final StockService stockService;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final OrderTransactionService orderTransactionService;
@@ -44,14 +46,16 @@ public class BookingService {
         userService.getUser(userId);
 
         boolean redisUsed = false;
+        boolean stockDecreased = false;
 
         try {
             redisUsed = redisStockService.decrease(product.getId());
+            stockDecreased = true;
             OrderResult result = orderTransactionService.process(userId, product, idempotencyKey, request, redisUsed);
             return BookingResponse.of(result.order(), result.payments());
         } catch (DataIntegrityViolationException e) {
-            if (redisUsed) {
-                redisStockService.increase(product.getId());
+            if (stockDecreased) {
+                restoreStock(product.getId(), redisUsed);
             }
             return orderRepository.findByIdempotencyKey(idempotencyKey)
                     .map(existingOrder -> BookingResponse.of(existingOrder, paymentRepository.findByOrderId(existingOrder.getId())))
@@ -60,12 +64,20 @@ public class BookingService {
                         return new GeneralException(ErrorCode.DUPLICATE_ORDER);
                     });
         } catch (Exception e) {
-            if (redisUsed) {
-                redisStockService.increase(product.getId());
+            if (stockDecreased) {
+                restoreStock(product.getId(), redisUsed);
             }
             idempotencyService.release(idempotencyKey);
             orderTransactionService.logFailure(userId, product.getId(), idempotencyKey, e.getMessage());
             throw e;
+        }
+    }
+
+    private void restoreStock(Long productId, boolean redisUsed) {
+        if (redisUsed) {
+            redisStockService.increase(productId);
+        } else {
+            stockService.increaseWithPessimisticLock(productId);
         }
     }
 

@@ -4,6 +4,8 @@ import com.reservation.domain.order.dto.BookingRequest;
 import com.reservation.domain.order.dto.BookingResponse;
 import com.reservation.domain.order.entity.OrderStatus;
 import com.reservation.domain.order.repository.OrderRepository;
+import com.reservation.domain.payment.client.PaymentResult;
+import com.reservation.domain.payment.client.PgClient;
 import com.reservation.domain.payment.dto.PaymentRequest;
 import com.reservation.domain.payment.entity.PaymentMethod;
 import com.reservation.domain.payment.repository.PaymentRepository;
@@ -13,11 +15,14 @@ import com.reservation.domain.stock.entity.Stock;
 import com.reservation.domain.stock.repository.StockRepository;
 import com.reservation.domain.user.entity.User;
 import com.reservation.domain.user.repository.UserRepository;
+import com.reservation.global.exception.GeneralException;
+import com.reservation.global.exception.code.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
@@ -27,6 +32,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 class BookingRedisFallbackTest {
@@ -46,6 +54,9 @@ class BookingRedisFallbackTest {
         registry.add("spring.data.redis.host", () -> "localhost");
         registry.add("spring.data.redis.port", () -> "1");
     }
+
+    @MockBean
+    private PgClient pgClient;
 
     @Autowired
     private BookingService bookingService;
@@ -88,6 +99,8 @@ class BookingRedisFallbackTest {
     @DisplayName("Redis 장애 시 DB Fallback으로 예약이 정상 처리된다")
     @Test
     void bookingSucceedsWithDbFallback() {
+        when(pgClient.pay(anyInt())).thenReturn(PaymentResult.success("txn-fallback-001"));
+
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
         ));
@@ -101,9 +114,30 @@ class BookingRedisFallbackTest {
         assertThat(stock.getRemainingQuantity()).isEqualTo(9);
     }
 
+    @DisplayName("Redis 장애 시 결제 실패하면 DB 재고가 복구된다")
+    @Test
+    void dbStockRestoredWhenPaymentFailsInFallback() {
+        when(pgClient.pay(anyInt())).thenReturn(PaymentResult.failure(ErrorCode.PAYMENT_FAILED));
+
+        BookingRequest request = new BookingRequest(product.getId(), List.of(
+                new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
+        ));
+
+        assertThatThrownBy(() -> bookingService.book(user.getId(), UUID.randomUUID().toString(), request))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(ex -> assertThat(((GeneralException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.PAYMENT_FAILED));
+
+        Stock stock = stockRepository.findByProductId(product.getId()).orElseThrow();
+        assertThat(stock.getRemainingQuantity()).isEqualTo(10);
+        assertThat(orderRepository.count()).isZero();
+    }
+
     @DisplayName("Redis 장애 시 동일 멱등성 키로 재요청하면 기존 주문을 반환한다")
     @Test
     void idempotencyFallbackReturnsSameOrder() {
+        when(pgClient.pay(anyInt())).thenReturn(PaymentResult.success("txn-fallback-002"));
+
         String idempotencyKey = UUID.randomUUID().toString();
         BookingRequest request = new BookingRequest(product.getId(), List.of(
                 new PaymentRequest(PaymentMethod.CREDIT_CARD, 100000)
@@ -119,6 +153,8 @@ class BookingRedisFallbackTest {
     @DisplayName("Redis 장애 시 재고 수량만큼만 예약이 성공한다")
     @Test
     void fallbackPreventsOverselling() {
+        when(pgClient.pay(anyInt())).thenReturn(PaymentResult.success("txn-fallback-003"));
+
         stockRepository.deleteAll();
         stockRepository.saveAndFlush(Stock.create(product, 2));
 
